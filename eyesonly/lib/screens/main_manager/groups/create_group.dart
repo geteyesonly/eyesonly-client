@@ -227,12 +227,11 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
       }
       ScreenFeedback.showError(context, error);
     } finally {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
-      setState(() {
-        _isSubmitting = false;
-      });
     }
   }
 

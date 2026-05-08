@@ -400,6 +400,7 @@ class FakeManagerApiService extends ManagerApiService {
     required String deviceIdentifier,
     required String groupId,
     required String encryptedMemberName,
+    bool isManager = false,
     String endpoint = '',
   }) async {
     addDeviceCalls.add(

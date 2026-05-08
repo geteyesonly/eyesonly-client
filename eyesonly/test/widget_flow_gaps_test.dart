@@ -27,6 +27,7 @@ void main() {
           initialSettings: const AppSettings(
             managerModeEnabled: false,
             useBiometricLock: true,
+            pushNotificationsEnabled: true,
             darkMode: false,
             managerServerURL: null,
             lastLoggedInUsername: null,
@@ -57,6 +58,7 @@ void main() {
           initialSettings: const AppSettings(
             managerModeEnabled: false,
             useBiometricLock: true,
+            pushNotificationsEnabled: true,
             darkMode: false,
             managerServerURL: null,
             lastLoggedInUsername: null,
@@ -94,6 +96,7 @@ void main() {
           initialSettings: const AppSettings(
             managerModeEnabled: false,
             useBiometricLock: true,
+            pushNotificationsEnabled: true,
             darkMode: false,
             managerServerURL: null,
             lastLoggedInUsername: null,
@@ -121,6 +124,7 @@ void main() {
         const AppSettings(
           managerModeEnabled: true,
           useBiometricLock: false,
+          pushNotificationsEnabled: true,
           darkMode: false,
           managerServerURL: 'http://manager',
           lastLoggedInUsername: 'tom',
@@ -170,6 +174,7 @@ void main() {
               const AppSettings(
                 managerModeEnabled: false,
                 useBiometricLock: false,
+                pushNotificationsEnabled: true,
                 darkMode: false,
                 managerServerURL: null,
                 lastLoggedInUsername: null,
@@ -208,6 +213,7 @@ void main() {
               const AppSettings(
                 managerModeEnabled: true,
                 useBiometricLock: false,
+                pushNotificationsEnabled: true,
                 darkMode: false,
                 managerServerURL: null,
                 lastLoggedInUsername: null,
@@ -412,6 +418,7 @@ void main() {
                             const AppSettings(
                               managerModeEnabled: true,
                               useBiometricLock: false,
+                              pushNotificationsEnabled: true,
                               darkMode: false,
                               managerServerURL: 'http://manager',
                               lastLoggedInUsername: 'tom',
@@ -459,6 +466,7 @@ void main() {
         const AppSettings(
           managerModeEnabled: true,
           useBiometricLock: false,
+          pushNotificationsEnabled: true,
           darkMode: false,
           managerServerURL: 'http://manager',
           lastLoggedInUsername: null,
@@ -511,6 +519,7 @@ void main() {
         const AppSettings(
           managerModeEnabled: true,
           useBiometricLock: false,
+          pushNotificationsEnabled: true,
           darkMode: false,
           managerServerURL: 'http://manager',
           lastLoggedInUsername: null,
@@ -573,6 +582,7 @@ class FakeSettingsStore extends SettingsStore {
     settings = AppSettings(
       managerModeEnabled: settings.managerModeEnabled,
       useBiometricLock: settings.useBiometricLock,
+      pushNotificationsEnabled: settings.pushNotificationsEnabled,
       darkMode: settings.darkMode,
       managerServerURL: settings.managerServerURL,
       lastLoggedInUsername: settings.lastLoggedInUsername,
@@ -602,6 +612,7 @@ class FakeSettingsStore extends SettingsStore {
     settings = AppSettings(
       managerModeEnabled: settings.managerModeEnabled,
       useBiometricLock: settings.useBiometricLock,
+      pushNotificationsEnabled: settings.pushNotificationsEnabled,
       darkMode: settings.darkMode,
       managerServerURL: settings.managerServerURL,
       lastLoggedInUsername: settings.lastLoggedInUsername,
@@ -616,6 +627,7 @@ class FakeSettingsStore extends SettingsStore {
     settings = AppSettings(
       managerModeEnabled: settings.managerModeEnabled,
       useBiometricLock: settings.useBiometricLock,
+      pushNotificationsEnabled: settings.pushNotificationsEnabled,
       darkMode: settings.darkMode,
       managerServerURL: settings.managerServerURL,
       lastLoggedInUsername: value,

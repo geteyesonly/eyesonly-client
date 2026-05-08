@@ -101,6 +101,7 @@ void main() {
         initialSettings: AppSettings(
           managerModeEnabled: false,
           useBiometricLock: false,
+          pushNotificationsEnabled: true,
           darkMode: false,
           managerServerURL: null,
           lastLoggedInUsername: null,
@@ -280,6 +281,7 @@ class FakeSettingsStore extends SettingsStore {
     return AppSettings(
       managerModeEnabled: managerModeEnabled ?? _settings.managerModeEnabled,
       useBiometricLock: useBiometricLock ?? _settings.useBiometricLock,
+      pushNotificationsEnabled: _settings.pushNotificationsEnabled,
       darkMode: darkMode ?? _settings.darkMode,
       managerServerURL: identical(managerServerURL, _unset)
           ? _settings.managerServerURL
