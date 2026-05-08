@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:eyesonly/screens/home_page.dart';
 import 'package:eyesonly/services/installation_id_store.dart';
 import 'package:eyesonly/services/push_notifications_service.dart';
 import 'package:eyesonly/services/settings_store.dart';
+import 'package:screen_protector/screen_protector.dart';
 
 typedef DeviceSupportChecker = Future<bool> Function();
 typedef DeviceAuthenticator = Future<bool> Function();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _enableScreenProtection();
   await InstallationIdStore().getOrCreateInstallationId();
   final AppSettings settings = await SettingsStore().load();
   await PushNotificationsService().initializeMessageHandling();
@@ -20,6 +23,18 @@ Future<void> main() async {
     fallbackBaseUrl: settings.managerServerURL,
   );
   runApp(MyApp(initialSettings: settings));
+}
+
+Future<void> _enableScreenProtection() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+    return;
+  }
+
+  try {
+    await ScreenProtector.preventScreenshotOn();
+  } on PlatformException {
+    // Ignore platform-specific failures to avoid blocking app startup.
+  }
 }
 
 class MyApp extends StatefulWidget {
