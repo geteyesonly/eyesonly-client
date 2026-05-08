@@ -1,0 +1,412 @@
+import 'package:flutter/material.dart';
+
+import 'package:eyesonly/screens/main_manager/groups/group_push_notification_page.dart';
+import 'package:eyesonly/screens/main_manager/groups/group_add_device.dart';
+import 'package:eyesonly/screens/main_manager/groups/group_add_manager_device.dart';
+import 'package:eyesonly/services/api_exception.dart';
+import 'package:eyesonly/services/device/api_service.dart';
+import 'package:eyesonly/services/group_display_service.dart';
+import 'package:eyesonly/services/manager/api_service.dart';
+import 'package:eyesonly/services/manager/group_content_key_store.dart';
+import 'package:eyesonly/services/manager/group_notification_service.dart';
+import 'package:eyesonly/services/screen_feedback.dart';
+
+class GroupDetailPage extends StatefulWidget {
+  const GroupDetailPage({
+    super.key,
+    required this.groupId,
+    required this.groupName,
+    required this.baseUrl,
+    required this.organizationName,
+    required this.isManager,
+    this.groupDisplayService,
+    this.managerApiService,
+    this.deviceApiService,
+    this.groupNotificationService,
+  });
+
+  final String groupId;
+  final String groupName;
+  final String baseUrl;
+  final String organizationName;
+  final bool isManager;
+  final GroupDisplayService? groupDisplayService;
+  final ManagerApiService? managerApiService;
+  final DeviceApiService? deviceApiService;
+  final GroupNotificationService? groupNotificationService;
+
+  @override
+  State<GroupDetailPage> createState() => _GroupDetailPageState();
+}
+
+class _GroupDetailPageState extends State<GroupDetailPage> {
+  static const String _ownerNameDecryptFailedLabel = 'Decryption failed';
+
+  bool _isLoading = true;
+  bool _showDeviceIdentifiers = false;
+  bool _isLeaving = false;
+  String? _errorMessage;
+  late final GroupDisplayService _groupDisplayService;
+  late final ManagerApiService _managerApiService;
+  late final DeviceApiService _deviceApiService;
+  late final GroupNotificationService _groupNotificationService;
+  final Set<String> _removingDeviceIds = <String>{};
+  List<_DeviceListEntry> _devices = <_DeviceListEntry>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _groupDisplayService = widget.groupDisplayService ?? GroupDisplayService();
+    _managerApiService =
+        widget.managerApiService ?? ManagerApiService(baseUrl: widget.baseUrl);
+    _deviceApiService =
+        widget.deviceApiService ?? DeviceApiService(baseUrl: widget.baseUrl);
+    _groupNotificationService =
+      widget.groupNotificationService ??
+      GroupNotificationService(
+        managerApiService: _managerApiService,
+        groupDisplayService: _groupDisplayService,
+      );
+    if (widget.isManager) {
+      _loadDevices();
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadDevices() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await _managerApiService.hydrateTokens();
+      await _groupDisplayService.syncGroupKeysFromDeviceEndpoint(
+        baseUrl: widget.baseUrl,
+        groupIds: <String>[widget.groupId],
+        scopes: const <String>[groupKeyScopeManagerRoster],
+      );
+      final List<MainManagerGroupDevice> devices =
+          await _managerApiService.getMainManagerGroupDevices(
+        groupId: widget.groupId,
+      );
+      final List<_DeviceListEntry> entries = <_DeviceListEntry>[];
+      for (final MainManagerGroupDevice device in devices) {
+        String ownerName = _ownerNameDecryptFailedLabel;
+        final String? decryptedOwnerName = await _groupDisplayService
+            .tryDecryptMemberName(
+              groupId: widget.groupId,
+              encryptedMemberName: device.encryptedMemberName ?? '',
+            );
+        if (decryptedOwnerName?.trim().isNotEmpty ?? false) {
+          ownerName = decryptedOwnerName!.trim();
+        }
+        entries.add(
+          _DeviceListEntry(
+            ownerName: ownerName,
+            deviceIdentifier: device.deviceIdentifier,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _devices = entries;
+        _isLoading = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.message;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _removeDevice(_DeviceListEntry device) async {
+    setState(() => _removingDeviceIds.add(device.deviceIdentifier));
+
+    try {
+      await _managerApiService.hydrateTokens();
+      await _managerApiService.removeDeviceFromGroup(
+        deviceIdentifier: device.deviceIdentifier,
+        groupId: widget.groupId,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _devices = _devices
+            .where((e) => e.deviceIdentifier != device.deviceIdentifier)
+            .toList();
+      });
+      ScreenFeedback.showMessage(context, 'Removed ${device.ownerName} from the group.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScreenFeedback.showError(context, error);
+    } catch (error) {
+      if (!mounted) return;
+      ScreenFeedback.showError(context, error);
+    } finally {
+      if (mounted) {
+        setState(() => _removingDeviceIds.remove(device.deviceIdentifier));
+      }
+    }
+  }
+
+  Future<void> _confirmRemoveDevice(_DeviceListEntry device) async {
+    final bool? shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Remove Device?'),
+          content: Text('Remove ${device.ownerName} from this group?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldRemove == true) {
+      await _removeDevice(device);
+    }
+  }
+
+  Future<void> _leaveGroup() async {
+    setState(() => _isLeaving = true);
+    try {
+      await _deviceApiService.leaveGroup(groupId: widget.groupId);
+      if (!mounted) return;
+      Navigator.of(context).pop(true); // signal groups page to refresh
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScreenFeedback.showError(context, error);
+    } catch (error) {
+      if (!mounted) return;
+      ScreenFeedback.showError(context, error);
+    } finally {
+      if (mounted) setState(() => _isLeaving = false);
+    }
+  }
+
+  Future<void> _confirmLeaveGroup() async {
+    final bool? shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Leave Group?'),
+          content: Text(
+            'Do you really want to leave ${widget.groupName}?\n\nOnly a manager can re-add you to this group.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldLeave == true) {
+      await _leaveGroup();
+    }
+  }
+
+  Future<void> _openGroupNotificationPage() async {
+    final GroupNotificationResult? result =
+        await Navigator.of(context).push<GroupNotificationResult>(
+          MaterialPageRoute<GroupNotificationResult>(
+            builder: (BuildContext context) => GroupPushNotificationPage(
+              groupId: widget.groupId,
+              groupName: widget.groupName,
+              baseUrl: widget.baseUrl,
+              groupNotificationService: _groupNotificationService,
+            ),
+          ),
+        );
+    if (!mounted || result == null) {
+      return;
+    }
+
+    final String message = result.skippedCount > 0
+        ? 'Notification sent to ${result.notifiedCount} devices. ${result.skippedCount} were skipped.'
+        : 'Notification sent to ${result.notifiedCount} devices.';
+    ScreenFeedback.showMessage(context, message);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.groupName),
+        actions: [
+          if (widget.isManager)
+            IconButton(
+              onPressed: _isLoading ? null : _loadDevices,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh',
+            ),
+        ],
+      ),
+      floatingActionButton: widget.isManager
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute<bool>(
+                    builder: (BuildContext context) => GroupAddDevicePage(
+                      groupId: widget.groupId,
+                      groupName: widget.groupName,
+                      baseUrl: widget.baseUrl,
+                      organizationName: widget.organizationName,
+                    ),
+                  ),
+                ).then((bool? added) {
+                  if (added == true) {
+                    _loadDevices();
+                  }
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Member'),
+            )
+          : null,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!widget.isManager) ...[
+                    FilledButton.icon(
+                      onPressed: _isLeaving ? null : _confirmLeaveGroup,
+                      icon: _isLeaving
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.exit_to_app),
+                      label: const Text('Leave Group'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
+                      ),
+                    ),
+                  ] else ...[
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Show installation identifiers'),
+                      value: _showDeviceIdentifiers,
+                      onChanged: (bool value) {
+                        setState(() => _showDeviceIdentifiers = value);
+                      },
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute<bool>(
+                              builder: (BuildContext context) =>
+                                  GroupAddManagerDevicePage(
+                                groupId: widget.groupId,
+                                groupName: widget.groupName,
+                                baseUrl: widget.baseUrl,
+                                organizationName: widget.organizationName,
+                              ),
+                            ),
+                          ).then((bool? added) {
+                            if (added == true) {
+                              _loadDevices();
+                            }
+                          });
+                        },
+                        icon: const Icon(Icons.manage_accounts),
+                        label: const Text('Add Manager Device'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: _openGroupNotificationPage,
+                        icon: const Icon(Icons.notifications_active_outlined),
+                        label: const Text('Send Message to Group'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: _errorMessage != null
+                          ? Center(child: Text(_errorMessage!))
+                          : _devices.isEmpty
+                              ? const Center(child: Text('No devices in this group.'))
+                              : ListView.separated(
+                                  itemCount: _devices.length,
+                                  separatorBuilder: (_, _) => const Divider(height: 1),
+                                  itemBuilder: (BuildContext context, int index) {
+                                    final _DeviceListEntry device = _devices[index];
+                                    return ListTile(
+                                      leading: const Icon(Icons.devices_outlined),
+                                      title: Text(device.ownerName),
+                                      subtitle: _showDeviceIdentifiers
+                                          ? Text(device.deviceIdentifier)
+                                          : null,
+                                      trailing: TextButton(
+                                        onPressed: _removingDeviceIds.contains(
+                                              device.deviceIdentifier,
+                                            )
+                                            ? null
+                                            : () => _confirmRemoveDevice(device),
+                                        child: _removingDeviceIds.contains(
+                                                device.deviceIdentifier,
+                                              )
+                                            ? const SizedBox(
+                                                height: 16,
+                                                width: 16,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const Text('Remove'),
+                                      ),
+                                    );
+                                  },
+                                ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _DeviceListEntry {
+  const _DeviceListEntry({
+    required this.ownerName,
+    required this.deviceIdentifier,
+  });
+
+  final String ownerName;
+  final String deviceIdentifier;
+}

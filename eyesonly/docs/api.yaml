@@ -1,0 +1,1504 @@
+openapi: 3.0.2
+info:
+  title: EyesOnly API
+  version: 1.0.0
+  description: OpenAPI schema for EyesOnly endpoints.
+paths:
+  /api/status/:
+    get:
+      operationId: getStatus
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  organization:
+                    type: string
+      tags:
+      - api
+  /api/device/groups/:
+    get:
+      operationId: listGetDeviceGroups
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserGroup'
+          description: ''
+      tags:
+      - api
+  /api/device/self/status/:
+    get:
+      operationId: getDeviceSelfStatus
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDeviceSelfStatus'
+          description: ''
+      tags:
+      - api
+  /api/device/encrypted-images/:
+    get:
+      operationId: listEncryptedImages
+      description: ''
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Pagination cursor returned by a previous response.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Maximum number of images to return per page.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceEncryptedImageListResponse'
+          description: Paginated list of encrypted images grouped by group and day.
+        '400':
+          description: Invalid request parameters.
+        '401':
+          description: Authentication credentials were not provided.
+      tags:
+      - api
+  /api/device/encrypted-images/{image_uuid}/blob/:
+    get:
+      operationId: downloadEncryptedImageBlob
+      description: ''
+      parameters:
+      - name: image_uuid
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Binary encrypted image blob
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Authentication credentials were not provided.
+        '404':
+          description: Encrypted image not found.
+      tags:
+      - api
+  /api/manager/groups/:
+    get:
+      operationId: getManagerGroups
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    uuid:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                    encrypted_name:
+                      type: string
+                      readOnly: true
+                    crypto_version:
+                      type: integer
+                      readOnly: true
+                    encryption_algorithm:
+                      type: string
+                      readOnly: true
+                    name_nonce:
+                      type: string
+                      readOnly: true
+                    status:
+                      type: string
+                      readOnly: true
+          description: Groups for the authenticated manager account.
+        '401':
+          description: Authentication credentials were not provided.
+      tags:
+      - api
+  /api/manager/group-devices/:
+    get:
+      operationId: getManagerGroupDevices
+      description: ''
+      parameters:
+      - name: group
+        in: query
+        required: true
+        description: UUID of the group whose authenticated user-owned devices should
+          be listed.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    device_identifier:
+                      type: string
+                      readOnly: true
+                    encrypted_member_name:
+                      type: string
+                      readOnly: true
+                      nullable: true
+                      description: Roster/admin metadata ciphertext for this device
+                        link. This should be encrypted client-side with the manager_roster
+                        group metadata key, not the group_shared key.
+                    public_key:
+                      type: string
+                      readOnly: true
+                    public_key_algorithm:
+                      type: string
+                      readOnly: true
+                    public_key_fingerprint:
+                      type: string
+                      readOnly: true
+          description: Devices owned by the authenticated user and linked to the specified
+            group.
+        '401':
+          description: Authentication credentials were not provided.
+        '404':
+          description: Group not found.
+      tags:
+      - api
+  /api/main-manager/groups/:
+    get:
+      operationId: listGetMainManagerGroups
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MainManagerGroup'
+          description: ''
+      tags:
+      - api
+  /api/main-manager/group-devices/:
+    get:
+      operationId: getMainManagerGroupDevices
+      description: ''
+      parameters:
+      - name: group
+        in: query
+        required: true
+        description: UUID of the group whose devices should be listed.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    device_identifier:
+                      type: string
+                      readOnly: true
+                    encrypted_member_name:
+                      type: string
+                      readOnly: true
+                      nullable: true
+                      description: Roster/admin metadata ciphertext for this device
+                        link. This should be encrypted client-side with the manager_roster
+                        group metadata key, not the group_shared key.
+                    public_key:
+                      type: string
+                      readOnly: true
+                    public_key_algorithm:
+                      type: string
+                      readOnly: true
+                    public_key_fingerprint:
+                      type: string
+                      readOnly: true
+          description: Devices linked to the specified group.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only main managers can perform this action.
+        '404':
+          description: Group not found.
+      tags:
+      - api
+  /api/device/fcm/:
+    post:
+      operationId: registerFCMDevice
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterFCMDevice'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterFCMDevice'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterFCMDevice'
+      responses:
+        '200':
+          description: FCM registration token updated for this device.
+        '201':
+          description: FCM device registered for this device.
+        '400':
+          description: Invalid request body.
+        '401':
+          description: Authentication credentials were not provided.
+      tags:
+      - api
+  /api/device/auth/challenge/:
+    post:
+      operationId: createCreateDeviceAuthChallenge
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthChallengeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthChallengeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthChallengeRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceAuthChallengeResponse'
+          description: ''
+      tags:
+      - api
+  /api/device/auth/token/:
+    post:
+      operationId: createCreateDeviceAuthToken
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthTokenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthTokenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthTokenRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceAuthTokenResponse'
+          description: ''
+      tags:
+      - api
+  /api/device/auth/revoke/:
+    post:
+      operationId: createRevokeDeviceAuthToken
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+          application/x-www-form-urlencoded:
+            schema: {}
+          multipart/form-data:
+            schema: {}
+      responses:
+        '204':
+          description: Device token revoked successfully.
+        '401':
+          description: Authentication credentials were not provided.
+      tags:
+      - api
+  /api/device/leave-group/:
+    post:
+      operationId: deviceLeavesGroup
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceLeavesGroup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceLeavesGroup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceLeavesGroup'
+      responses:
+        '204':
+          description: Device left the group successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '404':
+          description: Group not found or device is not part of this group.
+      tags:
+      - api
+  /api/device/group-key-envelopes/:
+    post:
+      operationId: getDeviceGroupKeyEnvelopes
+      description: Returns wrapped group metadata keys for the authenticated device.
+        Use group_shared for metadata any group device may decrypt. Use manager_roster
+        for manager-only roster/admin metadata such as encrypted_member_name. Manager-owned
+        devices may receive manager_roster envelopes; regular devices receive only
+        group_shared.
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetDeviceGroupKeyEnvelopes'
+            examples:
+              all-available-scopes:
+                summary: Fetch all scopes available to this device
+                value:
+                  groups:
+                  - 11111111-1111-1111-1111-111111111111
+              manager-roster-only:
+                summary: Fetch only manager-only roster/admin keys
+                value:
+                  groups:
+                  - 11111111-1111-1111-1111-111111111111
+                  scopes:
+                  - manager_roster
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GetDeviceGroupKeyEnvelopes'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GetDeviceGroupKeyEnvelopes'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    group:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                    scope:
+                      type: string
+                      readOnly: true
+                      description: 'Scope of the wrapped group metadata key: group_shared
+                        or manager_roster.'
+                    key_wrap_algorithm:
+                      type: string
+                      readOnly: true
+                    recipient_key_fingerprint:
+                      type: string
+                      readOnly: true
+                    encrypted_group_key:
+                      type: string
+                      readOnly: true
+              examples:
+                group-shared-envelope:
+                  summary: Shared metadata key visible to all group devices
+                  value:
+                  - group: 11111111-1111-1111-1111-111111111111
+                    scope: group_shared
+                    key_wrap_algorithm: x25519-xsalsa20-poly1305
+                    recipient_key_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                    encrypted_group_key: YmFzZTY0LWdyb3VwLXNoYXJlZC1rZXk=
+                manager-roster-envelope:
+                  summary: Manager-only roster/admin key
+                  value:
+                  - group: 11111111-1111-1111-1111-111111111111
+                    scope: manager_roster
+                    key_wrap_algorithm: x25519-xsalsa20-poly1305
+                    recipient_key_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                    encrypted_group_key: YmFzZTY0LW1hbmFnZXItcm9zdGVyLWtleQ==
+          description: Group key envelopes for the authenticated device.
+        '401':
+          description: Authentication credentials were not provided.
+      tags:
+      - api
+  /api/manager/upload-encrypted-blob/:
+    post:
+      operationId: uploadEncryptedImage
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - encrypted_blob
+              - group
+              - payload_nonce
+              - recipient_envelopes
+              properties:
+                encrypted_blob:
+                  type: string
+                  format: binary
+                  description: Encrypted ciphertext payload file.
+                encrypted_caption:
+                  type: string
+                  description: Optional encrypted caption.
+                group:
+                  type: string
+                  format: uuid
+                crypto_version:
+                  type: integer
+                  minimum: 1
+                  maximum: 32767
+                  default: 1
+                encryption_algorithm:
+                  type: string
+                  maxLength: 32
+                  default: xchacha20poly1305
+                payload_nonce:
+                  type: string
+                  description: Base64-encoded payload nonce.
+                recipient_envelopes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      recipient_device_identifier:
+                        type: string
+                        maxLength: 255
+                      key_wrap_algorithm:
+                        type: string
+                        default: x25519-hkdf-xchacha20poly1305
+                        maxLength: 32
+                      recipient_key_fingerprint:
+                        type: string
+                        maxLength: 64
+                      encrypted_content_key:
+                        type: string
+                    required:
+                    - recipient_device_identifier
+                    - recipient_key_fingerprint
+                    - encrypted_content_key
+                  description: Recipient envelope records encoded as JSON in the multipart
+                    field.
+                expires_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                client_ciphertext_hash_sha256:
+                  type: string
+                  maxLength: 64
+                  pattern: ^[a-f0-9]{64}$
+            encoding:
+              recipient_envelopes:
+                contentType: application/json
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadEncryptedImageResponse'
+          description: Encrypted image uploaded successfully.
+        '400':
+          description: Request validation failed.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only managers for the target group can perform this action.
+        '404':
+          description: Group not found.
+      tags:
+      - api
+  /api/manager/notify-group/:
+    post:
+      operationId: notifyGroup
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotifyGroup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotifyGroup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotifyGroup'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notified_count:
+                    type: integer
+                  skipped_count:
+                    type: integer
+          description: FCM notification dispatched to group members.
+        '400':
+          description: Request validation failed.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only group managers can perform this action.
+      tags:
+      - api
+  /api/delete-encrypted-image/:
+    post:
+      operationId: deleteEncryptedImagePost
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                group:
+                  type: string
+                  format: uuid
+                image_uuid:
+                  type: string
+                  format: uuid
+              required:
+              - group
+              - image_uuid
+        required: true
+      responses:
+        '204':
+          description: Encrypted image deleted successfully.
+        '400':
+          description: Missing or invalid delete parameters.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only group managers or group devices can perform this action.
+        '404':
+          description: Group not found or encrypted image not found.
+      tags:
+      - api
+    delete:
+      operationId: deleteEncryptedImage
+      description: ''
+      parameters: []
+      responses:
+        '204':
+          description: Encrypted image deleted successfully.
+        '400':
+          description: Missing or invalid delete parameters.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only group managers or group devices can perform this action.
+        '404':
+          description: Group not found or encrypted image not found.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                group:
+                  type: string
+                  format: uuid
+                image_uuid:
+                  type: string
+                  format: uuid
+              required:
+              - group
+              - image_uuid
+        required: true
+  /api/main-manager/register-device/:
+    post:
+      operationId: createDeviceRegistration
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistration'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistration'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistration'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRegistration'
+          description: ''
+      tags:
+      - api
+  /api/main-manager/create-group/:
+    post:
+      operationId: createGroup
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateGroup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateGroup'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MainManagerGroup'
+          description: Group created successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only staff users can perform this action.
+      tags:
+      - api
+  /api/main-manager/create-group-key-envelope/:
+    post:
+      operationId: createGroupKeyEnvelope
+      description: Creates or updates wrapped group metadata keys for one scope. Use
+        group_shared for metadata that any group device may decrypt. Use manager_roster
+        for manager-only roster/admin metadata such as encrypted_member_name. manager_roster
+        envelopes may only target devices owned by a manager or main manager of the
+        group.
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupKeyEnvelope'
+            examples:
+              group-shared:
+                summary: Distribute the shared group metadata key to group devices
+                value:
+                  group: 11111111-1111-1111-1111-111111111111
+                  scope: group_shared
+                  key_envelopes:
+                  - recipient_device_identifier: device-a
+                    key_wrap_algorithm: x25519-xsalsa20-poly1305
+                    recipient_key_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                    encrypted_group_key: YmFzZTY0LWdyb3VwLXNoYXJlZC1rZXk=
+              manager-roster:
+                summary: Distribute the manager-only roster/admin key
+                value:
+                  group: 11111111-1111-1111-1111-111111111111
+                  scope: manager_roster
+                  key_envelopes:
+                  - recipient_device_identifier: manager-device-a
+                    key_wrap_algorithm: x25519-xsalsa20-poly1305
+                    recipient_key_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                    encrypted_group_key: YmFzZTY0LW1hbmFnZXItcm9zdGVyLWtleQ==
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateGroupKeyEnvelope'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateGroupKeyEnvelope'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGroupKeyEnvelopeResponse'
+          description: Group key envelopes updated successfully.
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGroupKeyEnvelopeResponse'
+          description: Group key envelopes created successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only main managers can perform this action.
+        '404':
+          description: Group not found.
+      tags:
+      - api
+  /api/main-manager/add-device-to-group/:
+    post:
+      operationId: addDeviceToGroup
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDeviceToGroup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddDeviceToGroup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AddDeviceToGroup'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddDeviceToGroupResponse'
+          description: Device was already linked to the group.
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddDeviceToGroupResponse'
+          description: Device linked to the group successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only main managers can perform this action.
+        '404':
+          description: Group not found or device not found.
+      tags:
+      - api
+  /api/main-manager/remove-device-from-group/:
+    post:
+      operationId: removeDeviceFromGroup
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveDeviceFromGroup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RemoveDeviceFromGroup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RemoveDeviceFromGroup'
+      responses:
+        '204':
+          description: Device removed from the group successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only main managers can perform this action.
+        '404':
+          description: Group not found, device not found, or device is not part of
+            this group.
+      tags:
+      - api
+  /api/token/:
+    post:
+      operationId: createTokenObtainPair
+      description: 'Takes a set of user credentials and returns an access and refresh
+        JSON web
+
+        token pair to prove the authentication of those credentials.'
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+      tags:
+      - api
+  /api/token/refresh/:
+    post:
+      operationId: createTokenRefresh
+      description: 'Takes a refresh type JSON web token and returns an access type
+        JSON web
+
+        token if the refresh token is valid.'
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+      tags:
+      - api
+  /api/token/logout/:
+    post:
+      operationId: createLogout
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Logout'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Logout'
+          description: ''
+      tags:
+      - api
+  /api/main-manager/update-group/:
+    patch:
+      operationId: updateGroup
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateGroup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateGroup'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MainManagerGroup'
+          description: Group updated successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only main managers can perform this action.
+        '404':
+          description: Group not found.
+      tags:
+      - api
+  /api/device/fcm/deregister/:
+    delete:
+      operationId: deregisterFCMDevice
+      description: ''
+      parameters: []
+      responses:
+        '204':
+          description: FCM device deregistered successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '404':
+          description: No FCM device registration found for this device.
+      tags:
+      - api
+  /api/main-manager/delete-group/:
+    delete:
+      operationId: deleteGroup
+      description: ''
+      parameters: []
+      responses:
+        '204':
+          description: Group deleted successfully.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only main managers can perform this action.
+        '404':
+          description: Group not found.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                group:
+                  type: string
+                  format: uuid
+              required:
+              - group
+        required: true
+components:
+  schemas:
+    UserGroup:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        encrypted_name:
+          type: string
+        crypto_version:
+          type: integer
+          maximum: 9223372036854775807
+          format: int64
+          minimum: 0
+        encryption_algorithm:
+          type: string
+          maxLength: 32
+        name_nonce:
+          type: string
+          readOnly: true
+        user_role:
+          type: string
+          readOnly: true
+      required:
+      - encrypted_name
+    GetDeviceSelfStatus:
+      type: object
+      properties:
+        device_identifier:
+          type: string
+          readOnly: true
+          maxLength: 255
+        is_registered:
+          type: boolean
+          readOnly: true
+        group_names:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        organization_name:
+          type: string
+          readOnly: true
+    DeviceEncryptedImageListResponse:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            type: object
+            properties:
+              group:
+                type: string
+                format: uuid
+                readOnly: true
+              encrypted_name:
+                type: string
+                readOnly: true
+              days:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    day:
+                      type: string
+                      format: date
+                      readOnly: true
+                    images:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          image_uuid:
+                            type: string
+                            format: uuid
+                            readOnly: true
+                          encrypted_caption:
+                            type: string
+                            readOnly: true
+                            nullable: true
+                          crypto_version:
+                            type: integer
+                            readOnly: true
+                          encryption_algorithm:
+                            type: string
+                            readOnly: true
+                          payload_nonce:
+                            type: string
+                            readOnly: true
+                          ciphertext_hash_sha256:
+                            type: string
+                            readOnly: true
+                          key_wrap_algorithm:
+                            type: string
+                            readOnly: true
+                          recipient_key_fingerprint:
+                            type: string
+                            readOnly: true
+                          encrypted_content_key:
+                            type: string
+                            readOnly: true
+                          created_at:
+                            type: string
+                            format: date-time
+                            readOnly: true
+                          expires_at:
+                            type: string
+                            format: date-time
+                            readOnly: true
+                            nullable: true
+                      readOnly: true
+                readOnly: true
+          readOnly: true
+        next_cursor:
+          type: string
+          readOnly: true
+          nullable: true
+    MainManagerGroup:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        encrypted_name:
+          type: string
+        crypto_version:
+          type: integer
+          maximum: 9223372036854775807
+          format: int64
+          minimum: 0
+        encryption_algorithm:
+          type: string
+          maxLength: 32
+        name_nonce:
+          type: string
+          readOnly: true
+        user_role:
+          type: string
+          readOnly: true
+      required:
+      - encrypted_name
+    RegisterFCMDevice:
+      type: object
+      properties:
+        registration_id:
+          type: string
+        type:
+          enum:
+          - android
+          - ios
+          - web
+          type: string
+      required:
+      - registration_id
+      - type
+    DeviceAuthChallengeRequest:
+      type: object
+      properties:
+        device_identifier:
+          type: string
+          maxLength: 255
+      required:
+      - device_identifier
+    DeviceAuthChallengeResponse:
+      type: object
+      properties:
+        encrypted_challenge:
+          type: object
+          properties:
+            algorithm:
+              type: string
+              readOnly: true
+              maxLength: 64
+            ephemeral_public_key:
+              type: string
+              readOnly: true
+            nonce:
+              type: string
+              readOnly: true
+            ciphertext:
+              type: string
+              readOnly: true
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+    DeviceAuthTokenRequest:
+      type: object
+      properties:
+        device_identifier:
+          type: string
+          maxLength: 255
+        challenge:
+          type: string
+          maxLength: 128
+      required:
+      - device_identifier
+      - challenge
+    DeviceAuthTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          readOnly: true
+        token_type:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+    DeviceLeavesGroup:
+      type: object
+      properties:
+        group:
+          type: string
+          format: uuid
+      required:
+      - group
+    GetDeviceGroupKeyEnvelopes:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Group UUIDs to fetch wrapped metadata keys for.
+        scopes:
+          type: array
+          items:
+            enum:
+            - group_shared
+            - manager_roster
+            type: string
+          description: Optional scope filter. Omit to fetch all scopes available to
+            the authenticated device. Manager-owned devices may receive both group_shared
+            and manager_roster; regular devices receive only group_shared.
+      required:
+      - groups
+    UploadEncryptedImageResponse:
+      type: object
+      properties:
+        image_id:
+          type: integer
+          readOnly: true
+        encrypted_caption:
+          type: string
+          readOnly: true
+          nullable: true
+        group:
+          type: string
+          format: uuid
+          readOnly: true
+        recipient_count:
+          type: integer
+          readOnly: true
+        ciphertext_hash_sha256:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+    NotifyGroup:
+      type: object
+      properties:
+        group:
+          type: string
+          format: uuid
+        encrypted_payload:
+          type: string
+        nonce:
+          type: string
+        crypto_version:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          default: 1
+        encryption_algorithm:
+          type: string
+          default: xchacha20poly1305
+          maxLength: 32
+      required:
+      - group
+      - encrypted_payload
+      - nonce
+    DeleteEncryptedImage:
+      type: object
+      properties:
+        group:
+          type: string
+          format: uuid
+        image_uuid:
+          type: string
+          format: uuid
+      required:
+      - group
+      - image_uuid
+    DeviceRegistration:
+      type: object
+      properties:
+        device_identifier:
+          type: string
+          maxLength: 255
+        public_key:
+          type: string
+        public_key_algorithm:
+          type: string
+          maxLength: 50
+        owner_user:
+          type: integer
+          nullable: true
+      required:
+      - device_identifier
+      - public_key
+      - public_key_algorithm
+    CreateGroup:
+      type: object
+      properties:
+        encrypted_name:
+          type: string
+        crypto_version:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          default: 1
+        encryption_algorithm:
+          type: string
+          default: xchacha20poly1305
+          maxLength: 32
+        name_nonce:
+          type: string
+      required:
+      - encrypted_name
+      - name_nonce
+    CreateGroupKeyEnvelope:
+      type: object
+      properties:
+        group:
+          type: string
+          format: uuid
+        scope:
+          enum:
+          - group_shared
+          - manager_roster
+          type: string
+          default: group_shared
+          description: Key scope for the wrapped group metadata key. Use group_shared
+            for metadata any group device may decrypt. Use manager_roster for manager-only
+            roster/admin metadata such as encrypted_member_name.
+        key_envelopes:
+          type: array
+          items:
+            type: object
+            properties:
+              recipient_device_identifier:
+                type: string
+                maxLength: 255
+              key_wrap_algorithm:
+                type: string
+                default: x25519-hkdf-xchacha20poly1305
+                maxLength: 32
+              recipient_key_fingerprint:
+                type: string
+                maxLength: 64
+              encrypted_group_key:
+                type: string
+                description: Base64-encoded wrapped shared key material for the selected
+                  scope. Use group_shared for metadata all group devices may decrypt,
+                  and manager_roster for manager-only roster/admin metadata.
+            required:
+            - recipient_device_identifier
+            - recipient_key_fingerprint
+            - encrypted_group_key
+      required:
+      - group
+      - key_envelopes
+    CreateGroupKeyEnvelopeResponse:
+      type: object
+      properties:
+        group:
+          type: string
+          format: uuid
+          readOnly: true
+        scope:
+          enum:
+          - group_shared
+          - manager_roster
+          type: string
+          readOnly: true
+          description: The key scope that was created or updated.
+        envelope_count:
+          type: integer
+          readOnly: true
+        created_count:
+          type: integer
+          readOnly: true
+    AddDeviceToGroup:
+      type: object
+      properties:
+        device_identifier:
+          type: string
+          maxLength: 255
+        group:
+          type: string
+          format: uuid
+        encrypted_member_name:
+          type: string
+          description: Roster/admin metadata ciphertext for this device in the group.
+            Encrypt this with the manager_roster key scope so only manager-owned devices
+            can decrypt it.
+        is_manager:
+          type: boolean
+          default: false
+          description: Set true to grant manager role in this group to the device
+            owner. Requires the device to have a registered user.
+      required:
+      - device_identifier
+      - group
+      - encrypted_member_name
+    AddDeviceToGroupResponse:
+      type: object
+      properties:
+        device_identifier:
+          type: string
+          readOnly: true
+        group:
+          type: string
+          format: uuid
+          readOnly: true
+        encrypted_member_name:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Roster/admin metadata ciphertext stored for this device link.
+            This value belongs to the manager_roster key scope.
+        group_link_created:
+          type: boolean
+          readOnly: true
+    RemoveDeviceFromGroup:
+      type: object
+      properties:
+        device_identifier:
+          type: string
+          maxLength: 255
+        group:
+          type: string
+          format: uuid
+      required:
+      - device_identifier
+      - group
+    TokenObtainPair:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - username
+      - password
+    TokenRefresh:
+      type: object
+      properties:
+        refresh:
+          type: string
+        access:
+          type: string
+          readOnly: true
+      required:
+      - refresh
+    Logout:
+      type: object
+      properties:
+        refresh:
+          type: string
+      required:
+      - refresh
+    UpdateGroup:
+      type: object
+      properties:
+        encrypted_name:
+          type: string
+        crypto_version:
+          type: integer
+          maximum: 32767
+          minimum: 1
+        encryption_algorithm:
+          type: string
+          maxLength: 32
+        name_nonce:
+          type: string
+        group:
+          type: string
+          format: uuid
+      required:
+      - group
