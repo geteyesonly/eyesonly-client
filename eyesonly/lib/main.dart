@@ -65,6 +65,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _isLocked = false;
   bool _isAuthenticating = false;
   String? _lockMessage;
+  DateTime? _ignoreLifecycleUntil;
 
   @override
   void initState() {
@@ -89,13 +90,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final DateTime? ignoreLifecycleUntil = _ignoreLifecycleUntil;
     if (!_useBiometricLock || _isAuthenticating) {
       return;
     }
 
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    final bool shouldIgnoreLifecycleEvent =
+        ignoreLifecycleUntil != null && DateTime.now().isBefore(ignoreLifecycleUntil);
+
+    if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
+      if (shouldIgnoreLifecycleEvent) {
+        return;
+      }
       if (mounted) {
         setState(() {
           _isLocked = true;
@@ -103,10 +110,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         });
       }
       return;
-    }
-
-    if (state == AppLifecycleState.resumed && _isLocked) {
-      _unlockApp();
     }
   }
 
@@ -161,9 +164,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final bool didAuthenticate = await (widget.deviceAuthenticator?.call() ??
           _localAuthentication.authenticate(
             localizedReason: 'Unlock Eyes Only',
-            options: const AuthenticationOptions(
-              stickyAuth: true,
-            ),
+            options: const AuthenticationOptions(),
           ));
 
       if (!mounted) {
@@ -174,6 +175,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _isLocked = !didAuthenticate;
         _lockMessage = didAuthenticate ? null : 'Unlock required to continue.';
       });
+      if (didAuthenticate) {
+        _ignoreLifecycleUntil = DateTime.now().add(const Duration(seconds: 10));
+      }
     } on PlatformException catch (error) {
       if (!mounted) {
         return;

@@ -51,7 +51,7 @@ class AppSettings {
 
   static const AppSettings defaults = AppSettings(
     managerModeEnabled: false,
-    useBiometricLock: false,
+    useBiometricLock: true,
     darkMode: false,
     pushNotificationsEnabled: false,
     managerServerURL: null,

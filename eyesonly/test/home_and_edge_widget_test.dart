@@ -594,7 +594,18 @@ void main() {
     testWidgets('does not enable device lock when the device is unsupported', (
       WidgetTester tester,
     ) async {
-      final FakeSettingsStore settingsStore = FakeSettingsStore(AppSettings.defaults);
+      final FakeSettingsStore settingsStore = FakeSettingsStore(
+        const AppSettings(
+          managerModeEnabled: false,
+          useBiometricLock: false,
+          darkMode: false,
+          pushNotificationsEnabled: false,
+          managerServerURL: null,
+          lastLoggedInUsername: null,
+          deviceServerURLs: <String>[],
+          organizations: <AppOrganization>[],
+        ),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -619,7 +630,18 @@ void main() {
     testWidgets('does not enable device lock when authentication is declined', (
       WidgetTester tester,
     ) async {
-      final FakeSettingsStore settingsStore = FakeSettingsStore(AppSettings.defaults);
+      final FakeSettingsStore settingsStore = FakeSettingsStore(
+        const AppSettings(
+          managerModeEnabled: false,
+          useBiometricLock: false,
+          darkMode: false,
+          pushNotificationsEnabled: false,
+          managerServerURL: null,
+          lastLoggedInUsername: null,
+          deviceServerURLs: <String>[],
+          organizations: <AppOrganization>[],
+        ),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -652,6 +674,7 @@ void main() {
       );
 
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Delete Image Cache'), 200);
       await tester.tap(find.text('Delete Image Cache'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Delete Cache'));

@@ -119,9 +119,11 @@ void main() {
 
       expect(find.text('Manager Settings'), findsNothing);
 
+      await tester.scrollUntilVisible(find.text('Manager Mode'), 200);
       await tester.tap(find.text('Manager Mode'));
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(find.text('Manager Settings'), 200);
       expect(find.text('Manager Settings'), findsOneWidget);
       expect(settingsStore.savedManagerModeEnabled, isTrue);
       expect(settingsStore.savedManagerServerURL, 'http://localhost:8080');
@@ -142,6 +144,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(find.text('Delete Image Cache'), 200);
       await tester.tap(find.text('Delete Image Cache'));
       await tester.pumpAndSettle();
       expect(
