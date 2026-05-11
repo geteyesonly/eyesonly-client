@@ -26,6 +26,20 @@ Flutter/flutter_assets/
 Flutter/flutter_export_environment.sh
 ServiceDefinitions.json
 Runner/GeneratedPluginRegistrant.*
+Runner/GoogleService-Info.plist
+
+# iOS signing and local secret material
+*.mobileprovision
+*.p8
+*.p12
+*.cer
+*.key
+
+# Local env/config overrides and secret plists
+.env
+.env.*
+**/Secrets*.plist
+**/GoogleService-Info*.plist
 
 # Exceptions to above rules.
 !default.mode1v3

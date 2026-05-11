@@ -62,3 +62,16 @@ linux/flutter/generated_plugins.cmake
 # Firebase config — contains API keys, never commit these
 **/google-services.json
 **/GoogleService-Info.plist
+
+# iOS signing and local secret material
+**/*.mobileprovision
+**/*.p8
+**/*.p12
+**/*.cer
+**/*.key
+
+# iOS local env/config overrides
+ios/**/.env
+ios/**/.env.*
+ios/**/Secrets*.plist
+ios/**/GoogleService-Info*.plist

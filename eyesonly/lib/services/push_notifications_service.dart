@@ -23,6 +23,8 @@ class PushNotificationsService {
   static bool _firebaseInitialized = false;
   static bool _messageHandlingInitialized = false;
   static bool _localNotificationsInitialized = false;
+  static const int _apnsTokenRetryAttempts = 15;
+  static const Duration _apnsTokenRetryDelay = Duration(milliseconds: 400);
   static const String _syncedTokenKeyPrefix =
       'push_notifications_synced_token_';
   static const String _genericGroupNotificationBody =
@@ -85,7 +87,9 @@ class PushNotificationsService {
       throw ApiException('Notification permission is required.');
     }
 
-    final String? registrationId = await messaging.getToken();
+    final String? registrationId = await _getFcmTokenEnsuringApnsReady(
+      messaging,
+    );
     final String normalizedRegistrationId = registrationId?.trim() ?? '';
     if (normalizedRegistrationId.isEmpty) {
       throw ApiException(
@@ -176,7 +180,9 @@ class PushNotificationsService {
       return;
     }
 
-    final String? token = await FirebaseMessaging.instance.getToken();
+    final String? token = await _getFcmTokenEnsuringApnsReady(
+      FirebaseMessaging.instance,
+    );
     final String registrationId = token?.trim() ?? '';
     if (registrationId.isEmpty) {
       return;
@@ -276,6 +282,38 @@ class PushNotificationsService {
         'Firebase is not configured yet on this app. Add Firebase configuration files first.',
       );
     }
+  }
+
+  Future<String?> _getFcmTokenEnsuringApnsReady(FirebaseMessaging messaging) async {
+    if (Platform.isIOS && !_hasApnsToken(await messaging.getAPNSToken())) {
+      await _waitForApnsToken(messaging);
+    }
+
+    try {
+      return await messaging.getToken();
+    } catch (_) {
+      throw ApiException(
+        'Push token is not ready yet. Please wait a moment and try again.',
+      );
+    }
+  }
+
+  Future<void> _waitForApnsToken(FirebaseMessaging messaging) async {
+    for (int i = 0; i < _apnsTokenRetryAttempts; i++) {
+      final String? apnsToken = await messaging.getAPNSToken();
+      if (_hasApnsToken(apnsToken)) {
+        return;
+      }
+      await Future<void>.delayed(_apnsTokenRetryDelay);
+    }
+
+    throw ApiException(
+      'APNs token has not been set yet. Please allow notifications and try again.',
+    );
+  }
+
+  bool _hasApnsToken(String? token) {
+    return (token?.trim().isNotEmpty ?? false);
   }
 
   static Future<void> processIncomingRemoteMessage(RemoteMessage message) async {
