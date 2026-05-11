@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:eyesonly/screens/home_page.dart';
+import 'package:eyesonly/screens/onboarding_page.dart';
 import 'package:eyesonly/services/installation_id_store.dart';
 import 'package:eyesonly/services/push_notifications_service.dart';
 import 'package:eyesonly/services/settings_store.dart';
@@ -19,7 +20,9 @@ Future<void> main() async {
   await PushNotificationsService().initializeMessageHandling();
   await PushNotificationsService().syncTokenOnAppStart(
     pushNotificationsEnabled: settings.pushNotificationsEnabled,
-    baseUrls: settings.organizations.map((AppOrganization organization) => organization.apiUrl),
+    baseUrls: settings.organizations.map(
+      (AppOrganization organization) => organization.apiUrl,
+    ),
     fallbackBaseUrl: settings.managerServerURL,
   );
   runApp(MyApp(initialSettings: settings));
@@ -60,6 +63,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final LocalAuthentication _localAuthentication = LocalAuthentication();
   late final SettingsStore _settingsStore;
+  late AppSettings _currentSettings;
   late bool _darkMode;
   late bool _useBiometricLock;
   bool _isLocked = false;
@@ -72,6 +76,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _settingsStore = widget.settingsStore ?? SettingsStore();
+    _currentSettings = widget.initialSettings;
     _darkMode = widget.initialSettings.darkMode;
     _useBiometricLock = widget.initialSettings.useBiometricLock;
     _isLocked = _useBiometricLock;
@@ -96,7 +101,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
 
     final bool shouldIgnoreLifecycleEvent =
-        ignoreLifecycleUntil != null && DateTime.now().isBefore(ignoreLifecycleUntil);
+        ignoreLifecycleUntil != null &&
+        DateTime.now().isBefore(ignoreLifecycleUntil);
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
@@ -122,6 +128,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     final bool hadBiometricLock = _useBiometricLock;
 
     setState(() {
+      _currentSettings = settings;
       _darkMode = settings.darkMode;
       _useBiometricLock = settings.useBiometricLock;
       if (!_useBiometricLock) {
@@ -148,8 +155,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     try {
-      final bool isDeviceSupported = await (widget.deviceSupportChecker?.call() ??
-          _localAuthentication.isDeviceSupported());
+      final bool isDeviceSupported =
+          await (widget.deviceSupportChecker?.call() ??
+              _localAuthentication.isDeviceSupported());
       if (!isDeviceSupported) {
         if (!mounted) {
           return;
@@ -161,11 +169,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return;
       }
 
-      final bool didAuthenticate = await (widget.deviceAuthenticator?.call() ??
-          _localAuthentication.authenticate(
-            localizedReason: 'Unlock Eyes Only',
-            options: const AuthenticationOptions(),
-          ));
+      final bool didAuthenticate =
+          await (widget.deviceAuthenticator?.call() ??
+              _localAuthentication.authenticate(
+                localizedReason: 'Unlock Eyes Only',
+                options: const AuthenticationOptions(),
+              ));
 
       if (!mounted) {
         return;
@@ -237,10 +246,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       },
       home:
           widget.home ??
-          MyHomePage(
-            title: 'Eyes Only',
-            onSettingsChanged: _reloadAppSettings,
-          ),
+          (_currentSettings.onboardingCompleted
+              ? MyHomePage(
+                  title: 'Eyes Only',
+                  onSettingsChanged: _reloadAppSettings,
+                )
+              : OnboardingPage(
+                  initialSettings: _currentSettings,
+                  onCompleted: () {
+                    _reloadAppSettings();
+                  },
+                )),
     );
   }
 }
@@ -281,7 +297,8 @@ class _AppLockOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    message ?? 'Use face, fingerprint, or your device code to continue.',
+                    message ??
+                        'Use face, fingerprint, or your device code to continue.',
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),

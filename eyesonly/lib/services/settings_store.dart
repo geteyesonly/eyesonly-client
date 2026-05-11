@@ -38,6 +38,7 @@ class AppSettings {
     required this.lastLoggedInUsername,
     required this.deviceServerURLs,
     required this.organizations,
+    this.onboardingCompleted = true,
   });
 
   final bool managerModeEnabled;
@@ -48,6 +49,7 @@ class AppSettings {
   final String? lastLoggedInUsername;
   final List<String> deviceServerURLs;
   final List<AppOrganization> organizations;
+  final bool onboardingCompleted;
 
   static const AppSettings defaults = AppSettings(
     managerModeEnabled: false,
@@ -58,6 +60,7 @@ class AppSettings {
     lastLoggedInUsername: null,
     deviceServerURLs: [],
     organizations: [],
+    onboardingCompleted: false,
   );
 }
 
@@ -65,11 +68,13 @@ class SettingsStore {
   static const String managerModeEnabledKey = 'manager_mode_enabled';
   static const String useBiometricLockKey = 'use_biometric_lock';
   static const String darkModeKey = 'dark_mode';
-  static const String pushNotificationsEnabledKey = 'push_notifications_enabled';
+  static const String pushNotificationsEnabledKey =
+      'push_notifications_enabled';
   static const String managerServerURLKey = 'server_url';
   static const String lastLoggedInUsernameKey = 'last_logged_in_username';
   static const String deviceServerURLsKey = 'device_server_urls';
   static const String organizationsKey = 'organizations';
+  static const String onboardingCompletedKey = 'onboarding_completed';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -77,6 +82,13 @@ class SettingsStore {
         prefs.getStringList(deviceServerURLsKey) ??
         AppSettings.defaults.deviceServerURLs;
     final List<AppOrganization> organizations = _readOrganizations(prefs);
+    final bool hasOnboardingCompletedValue = prefs.containsKey(
+      onboardingCompletedKey,
+    );
+    final bool onboardingCompleted = hasOnboardingCompletedValue
+        ? (prefs.getBool(onboardingCompletedKey) ??
+              AppSettings.defaults.onboardingCompleted)
+        : organizations.isNotEmpty;
 
     return AppSettings(
       managerModeEnabled:
@@ -90,12 +102,14 @@ class SettingsStore {
           prefs.getBool(pushNotificationsEnabledKey) ??
           AppSettings.defaults.pushNotificationsEnabled,
       managerServerURL:
-          prefs.getString(managerServerURLKey) ?? AppSettings.defaults.managerServerURL,
+          prefs.getString(managerServerURLKey) ??
+          AppSettings.defaults.managerServerURL,
       lastLoggedInUsername:
           prefs.getString(lastLoggedInUsernameKey) ??
           AppSettings.defaults.lastLoggedInUsername,
       deviceServerURLs: deviceServerUrls,
       organizations: organizations,
+      onboardingCompleted: onboardingCompleted,
     );
   }
 
@@ -133,7 +147,9 @@ class SettingsStore {
         .toSet()
         .toList();
     final List<String> encodedOrganizations = organizations
-        .map((AppOrganization organization) => jsonEncode(organization.toJson()))
+        .map(
+          (AppOrganization organization) => jsonEncode(organization.toJson()),
+        )
         .toList();
 
     await prefs.setStringList(organizationsKey, encodedOrganizations);
@@ -153,8 +169,9 @@ class SettingsStore {
     }
 
     final AppSettings settings = await load();
-    final List<AppOrganization> organizations =
-        List<AppOrganization>.from(settings.organizations);
+    final List<AppOrganization> organizations = List<AppOrganization>.from(
+      settings.organizations,
+    );
     final int existingIndex = organizations.indexWhere(
       (AppOrganization current) =>
           current.apiUrl.trim() == normalizedOrganization.apiUrl,
@@ -217,6 +234,11 @@ class SettingsStore {
     await prefs.setString(lastLoggedInUsernameKey, normalizedValue);
   }
 
+  Future<void> saveOnboardingCompleted(bool value) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(onboardingCompletedKey, value);
+  }
+
   Future<void> clearAll() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove(managerModeEnabledKey);
@@ -227,5 +249,6 @@ class SettingsStore {
     await prefs.remove(lastLoggedInUsernameKey);
     await prefs.remove(deviceServerURLsKey);
     await prefs.remove(organizationsKey);
+    await prefs.remove(onboardingCompletedKey);
   }
 }

@@ -54,11 +54,12 @@ class PushNotificationsService {
     }
     _messageHandlingInitialized = true;
 
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-      alert: false,
-      badge: false,
-      sound: false,
-    );
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
+          alert: false,
+          badge: false,
+          sound: false,
+        );
 
     FirebaseMessaging.onMessage.listen(processIncomingRemoteMessage);
     FirebaseMessaging.onMessageOpenedApp.listen(processIncomingRemoteMessage);
@@ -73,17 +74,21 @@ class PushNotificationsService {
       fallbackBaseUrl: fallbackBaseUrl,
     );
     if (normalizedBaseUrls.isEmpty) {
-      throw ApiException('Add an organization first to enable push notifications.');
+      throw ApiException(
+        'Add an organization first to enable push notifications.',
+      );
     }
 
     await initializeMessageHandling();
     await _ensureFirebaseInitialized();
+    await _requestSystemNotificationPermissions();
 
     final FirebaseMessaging messaging = FirebaseMessaging.instance;
     final NotificationSettings permission = await messaging.requestPermission();
     final AuthorizationStatus status = permission.authorizationStatus;
-    if (status == AuthorizationStatus.denied ||
-        status == AuthorizationStatus.notDetermined) {
+    if (_shouldRequireGrantedPermission &&
+        (status == AuthorizationStatus.denied ||
+            status == AuthorizationStatus.notDetermined)) {
       throw ApiException('Notification permission is required.');
     }
 
@@ -116,7 +121,9 @@ class PushNotificationsService {
       fallbackBaseUrl: fallbackBaseUrl,
     );
     if (normalizedBaseUrls.isEmpty) {
-      throw ApiException('Add an organization first to disable push notifications.');
+      throw ApiException(
+        'Add an organization first to disable push notifications.',
+      );
     }
 
     Object? lastError;
@@ -146,7 +153,9 @@ class PushNotificationsService {
       if (lastError is ApiException) {
         throw lastError;
       }
-      throw ApiException('Could not disable push notifications on one or more organizations.');
+      throw ApiException(
+        'Could not disable push notifications on one or more organizations.',
+      );
     }
   }
 
@@ -205,7 +214,8 @@ class PushNotificationsService {
 
     for (final String baseUrl in baseUrls) {
       final String tokenKey = _syncedTokenKey(baseUrl);
-      final String previousSyncedToken = prefs.getString(tokenKey)?.trim() ?? '';
+      final String previousSyncedToken =
+          prefs.getString(tokenKey)?.trim() ?? '';
       if (previousSyncedToken == registrationId) {
         continue;
       }
@@ -237,7 +247,9 @@ class PushNotificationsService {
       if (lastError is ApiException) {
         throw lastError;
       }
-      throw ApiException('Could not enable push notifications on one or more organizations.');
+      throw ApiException(
+        'Could not enable push notifications on one or more organizations.',
+      );
     }
   }
 
@@ -268,6 +280,13 @@ class PushNotificationsService {
     return 'android';
   }
 
+  bool get _shouldRequireGrantedPermission {
+    if (kIsWeb) {
+      return true;
+    }
+    return Platform.isIOS || Platform.isMacOS;
+  }
+
   Future<void> _ensureFirebaseInitialized() async {
     if (_firebaseInitialized || Firebase.apps.isNotEmpty) {
       _firebaseInitialized = true;
@@ -284,7 +303,9 @@ class PushNotificationsService {
     }
   }
 
-  Future<String?> _getFcmTokenEnsuringApnsReady(FirebaseMessaging messaging) async {
+  Future<String?> _getFcmTokenEnsuringApnsReady(
+    FirebaseMessaging messaging,
+  ) async {
     if (Platform.isIOS && !_hasApnsToken(await messaging.getAPNSToken())) {
       await _waitForApnsToken(messaging);
     }
@@ -316,7 +337,9 @@ class PushNotificationsService {
     return (token?.trim().isNotEmpty ?? false);
   }
 
-  static Future<void> processIncomingRemoteMessage(RemoteMessage message) async {
+  static Future<void> processIncomingRemoteMessage(
+    RemoteMessage message,
+  ) async {
     try {
       if (!_firebaseInitialized && Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
@@ -335,12 +358,12 @@ class PushNotificationsService {
     final DecryptedGroupNotification? decryptedNotification =
         await notificationService.decryptMessageData(message.data);
     final String messageGroupId =
-      (message.data['group'] as String?)?.trim() ?? '';
+        (message.data['group'] as String?)?.trim() ?? '';
     final bool hasEncryptedGroupPayload =
-      messageGroupId.isNotEmpty &&
-      ((message.data['encrypted_payload'] as String?)?.trim().isNotEmpty ??
-        false) &&
-      ((message.data['nonce'] as String?)?.trim().isNotEmpty ?? false);
+        messageGroupId.isNotEmpty &&
+        ((message.data['encrypted_payload'] as String?)?.trim().isNotEmpty ??
+            false) &&
+        ((message.data['nonce'] as String?)?.trim().isNotEmpty ?? false);
 
     String? body;
     String title = 'EyesOnly';
@@ -411,19 +434,29 @@ class PushNotificationsService {
     );
 
     final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
-        _localNotificationsPlugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
+        _localNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
     await androidPlugin?.createNotificationChannel(_notificationChannel);
+
+    _localNotificationsInitialized = true;
+  }
+
+  Future<void> _requestSystemNotificationPermissions() async {
+    final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
+        _localNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
     await androidPlugin?.requestNotificationsPermission();
 
     final IOSFlutterLocalNotificationsPlugin? iosPlugin =
-        _localNotificationsPlugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >();
+        _localNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
     await iosPlugin?.requestPermissions(alert: true, badge: true, sound: true);
-
-    _localNotificationsInitialized = true;
   }
 
   String _syncedTokenKey(String baseUrl) {
