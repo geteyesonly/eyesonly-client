@@ -1,6 +1,7 @@
 import 'package:eyesonly/services/installation_id_store.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -14,6 +15,8 @@ class _AboutPageState extends State<AboutPage> {
   String _versionLabel = 'Loading...';
   String _installationId = 'Loading...';
   bool _showInstallationId = false;
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -38,26 +41,32 @@ class _AboutPageState extends State<AboutPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('About')),
+      appBar: AppBar(title: Text(l10n?.homeTabAbout ?? 'About')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'App Version',
+            Text(
+              l10n?.settingsAppVersion ?? 'App Version',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             SelectableText(_versionLabel),
             const SizedBox(height: 20),
-            const Text(
-              'Installation Identifier',
+            Text(
+              l10n?.aboutInstallationIdentifier ?? 'Installation Identifier',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
-            SelectableText(_showInstallationId ? _installationId : 'Hidden'),
+            SelectableText(
+              _showInstallationId
+                  ? _installationId
+                  : (l10n?.aboutHiddenValue ?? 'Hidden'),
+            ),
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () {
@@ -69,7 +78,9 @@ class _AboutPageState extends State<AboutPage> {
                 _showInstallationId ? Icons.visibility_off : Icons.visibility,
               ),
               label: Text(
-                _showInstallationId ? 'Hide Identifier' : 'Show Identifier',
+                _showInstallationId
+                    ? (l10n?.aboutHideIdentifier ?? 'Hide Identifier')
+                    : (l10n?.aboutShowIdentifier ?? 'Show Identifier'),
               ),
             ),
           ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 import 'package:eyesonly/screens/main_manager/groups/group_push_notification_page.dart';
 import 'package:eyesonly/screens/main_manager/groups/group_add_device.dart';
@@ -40,8 +41,6 @@ class GroupDetailPage extends StatefulWidget {
 }
 
 class _GroupDetailPageState extends State<GroupDetailPage> {
-  static const String _ownerNameDecryptFailedLabel = 'Decryption failed';
-
   bool _isLoading = true;
   bool _showDeviceIdentifiers = false;
   bool _isLeaving = false;
@@ -52,6 +51,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   late final GroupNotificationService _groupNotificationService;
   final Set<String> _removingDeviceIds = <String>{};
   List<_DeviceListEntry> _devices = <_DeviceListEntry>[];
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -93,7 +94,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       );
       final List<_DeviceListEntry> entries = <_DeviceListEntry>[];
       for (final MainManagerGroupDevice device in devices) {
-        String ownerName = _ownerNameDecryptFailedLabel;
+        String ownerName = _l10n?.groupDetailDecryptionFailed ?? 'Decryption failed';
         final String? decryptedOwnerName = await _groupDisplayService
             .tryDecryptMemberName(
               groupId: widget.groupId,
@@ -146,7 +147,11 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
             .where((e) => e.deviceIdentifier != device.deviceIdentifier)
             .toList();
       });
-      ScreenFeedback.showMessage(context, 'Removed ${device.ownerName} from the group.');
+      ScreenFeedback.showMessage(
+        context,
+        _l10n?.groupDetailRemovedFromGroup(device.ownerName) ??
+        'Removed ${device.ownerName} from the group.',
+      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScreenFeedback.showError(context, error);
@@ -165,16 +170,19 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Remove Device?'),
-          content: Text('Remove ${device.ownerName} from this group?'),
+          title: Text(_l10n?.groupDetailRemoveDeviceTitle ?? 'Remove Device?'),
+          content: Text(
+            _l10n?.groupDetailRemoveDevicePrompt(device.ownerName) ??
+                'Remove ${device.ownerName} from this group?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(_l10n?.groupDetailCancel ?? 'Cancel'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Remove'),
+              child: Text(_l10n?.groupDetailRemoveAction ?? 'Remove'),
             ),
           ],
         );
@@ -207,18 +215,19 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Leave Group?'),
+          title: Text(_l10n?.groupDetailLeaveGroupTitle ?? 'Leave Group?'),
           content: Text(
-            'Do you really want to leave ${widget.groupName}?\n\nOnly a manager can re-add you to this group.',
+            _l10n?.groupDetailLeaveGroupPrompt(widget.groupName) ??
+                'Do you really want to leave ${widget.groupName}?\n\nOnly a manager can re-add you to this group.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(_l10n?.groupDetailCancel ?? 'Cancel'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Leave'),
+              child: Text(_l10n?.groupDetailLeaveAction ?? 'Leave'),
             ),
           ],
         );
@@ -246,13 +255,20 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     }
 
     final String message = result.skippedCount > 0
-        ? 'Notification sent to ${result.notifiedCount} devices. ${result.skippedCount} were skipped.'
-        : 'Notification sent to ${result.notifiedCount} devices.';
+        ? (_l10n?.groupDetailNotificationSentSkipped(
+              result.notifiedCount,
+              result.skippedCount,
+            ) ??
+            'Notification sent to ${result.notifiedCount} devices. ${result.skippedCount} were skipped.')
+        : (_l10n?.groupDetailNotificationSent(result.notifiedCount) ??
+            'Notification sent to ${result.notifiedCount} devices.');
     ScreenFeedback.showMessage(context, message);
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.groupName),
@@ -261,7 +277,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
             IconButton(
               onPressed: _isLoading ? null : _loadDevices,
               icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh',
+              tooltip: l10n?.groupsRefreshTooltip ?? 'Refresh',
             ),
         ],
       ),
@@ -285,7 +301,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 });
               },
               icon: const Icon(Icons.add),
-              label: const Text('Add Member'),
+              label: Text(l10n?.groupDetailAddMember ?? 'Add Member'),
             )
           : null,
       body: _isLoading
@@ -305,7 +321,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.exit_to_app),
-                      label: const Text('Leave Group'),
+                      label: Text(l10n?.groupsLeaveGroup ?? 'Leave Group'),
                       style: FilledButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.error,
                         foregroundColor: Theme.of(context).colorScheme.onError,
@@ -314,7 +330,10 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                   ] else ...[
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Show installation identifiers'),
+                      title: Text(
+                        l10n?.groupDetailShowInstallationIdentifiers ??
+                            'Show installation identifiers',
+                      ),
                       value: _showDeviceIdentifiers,
                       onChanged: (bool value) {
                         setState(() => _showDeviceIdentifiers = value);
@@ -342,7 +361,10 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                           });
                         },
                         icon: const Icon(Icons.manage_accounts),
-                        label: const Text('Add Manager Device'),
+                        label: Text(
+                          l10n?.groupAddManagerDeviceTitle ??
+                              'Add Manager Device',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -351,7 +373,10 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                       child: OutlinedButton.icon(
                         onPressed: _openGroupNotificationPage,
                         icon: const Icon(Icons.notifications_active_outlined),
-                        label: const Text('Send Message to Group'),
+                        label: Text(
+                          l10n?.homeSendMessageToGroup ??
+                              'Send Message to Group',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -359,7 +384,12 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                       child: _errorMessage != null
                           ? Center(child: Text(_errorMessage!))
                           : _devices.isEmpty
-                              ? const Center(child: Text('No devices in this group.'))
+                              ? Center(
+                                  child: Text(
+                                    l10n?.groupDetailNoDevicesInGroup ??
+                                        'No devices in this group.',
+                                  ),
+                                )
                               : ListView.separated(
                                   itemCount: _devices.length,
                                   separatorBuilder: (_, _) => const Divider(height: 1),
@@ -387,7 +417,10 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                                                   strokeWidth: 2,
                                                 ),
                                               )
-                                            : const Text('Remove'),
+                                            : Text(
+                                                l10n?.groupDetailRemoveAction ??
+                                                    'Remove',
+                                              ),
                                       ),
                                     );
                                   },

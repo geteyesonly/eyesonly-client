@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 import 'package:eyesonly/screens/groups_page.dart';
 import 'package:eyesonly/screens/main_manager/groups/create_group.dart';
@@ -68,6 +69,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   bool _isSubmittingPushChoice = false;
   String? _pushChoiceError;
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -167,6 +170,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       }
       setState(() {
         _organizationError =
+            _l10n?.onboardingOrganizationUnreachable ??
             'Could not reach the server. Please check the URL and your network connection.';
         _isCheckingOrganization = false;
         _checkedOrganizationApiUrl = null;
@@ -245,9 +249,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Future<void> _scanOrganizationQrCode() async {
     final String? scannedValue = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
-        builder: (BuildContext context) => const ScanQrCodePage(
-          title: 'Scan Organization QR Code',
-          instruction:
+        builder: (BuildContext context) => ScanQrCodePage(
+          title: _l10n?.onboardingScanOrganizationQrTitle ??
+              'Scan Organization QR Code',
+          instruction: _l10n?.onboardingScanOrganizationQrInstruction ??
               'Scan the main manager organization QR code to fill the API URL.',
         ),
       ),
@@ -261,7 +266,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (resolvedApiUrl == null) {
       setState(() {
         _organizationError =
-            'The scanned QR code did not contain a valid organization API URL.';
+        _l10n?.onboardingOrganizationInvalidQr ??
+        'The scanned QR code did not contain a valid organization API URL.';
       });
       return;
     }
@@ -327,7 +333,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return (
           orgName: null,
-          error:
+          error: _l10n?.onboardingUnexpectedStatus(response.statusCode) ??
               'Server returned an unexpected status (${response.statusCode}). Please check the URL.',
         );
       }
@@ -349,12 +355,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
     } on TimeoutException {
       return (
         orgName: null,
-        error: 'Could not reach the server within 10 seconds.',
+        error: _l10n?.onboardingTimeout ??
+            'Could not reach the server within 10 seconds.',
       );
     } catch (_) {
       return (
         orgName: null,
-        error:
+        error: _l10n?.onboardingOrganizationUnreachable ??
             'Could not reach the server. Please check the URL and your network connection.',
       );
     }
@@ -553,7 +560,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (_primaryOrganization == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Complete organization setup first.')),
+            SnackBar(
+              content: Text(
+                _l10n?.onboardingCompleteOrganizationFirst ??
+                    'Complete organization setup first.',
+              ),
+            ),
           );
         }
         return;
@@ -565,8 +577,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (!_groupMembershipConfirmed) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Waiting for admin assignment before next step.'),
+          SnackBar(
+            content: Text(
+              _l10n?.onboardingWaitingForAdminAssignment ??
+                  'Waiting for admin assignment before next step.',
+            ),
           ),
         );
       }
@@ -660,6 +675,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return PopScope(
       canPop: _currentStep == 0,
       onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -670,7 +687,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: const Text('Welcome to Eyes Only'),
+          title: Text(l10n?.onboardingWelcomeTitle ?? 'Welcome to Eyes Only'),
         ),
         body: SafeArea(
           child: Column(
@@ -702,6 +719,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildOrganizationStep(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Form(
@@ -710,35 +729,39 @@ class _OnboardingPageState extends State<OnboardingPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Step 1: Connect your organization',
+              l10n?.onboardingStep1Title ?? 'Step 1: Connect your organization',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 12),
             Text(
-              'Enter your organization API URL. We will verify it before continuing.',
+              l10n?.onboardingStep1Body ??
+                  'Enter your organization API URL. We will verify it before continuing.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
             TextFormField(
               controller: _organizationUrlController,
-              decoration: const InputDecoration(
-                labelText: 'Organization API URL',
-                hintText: 'https://api.example.com',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n?.onboardingOrganizationApiUrlLabel ??
+                    'Organization API URL',
+                hintText: l10n?.onboardingOrganizationApiUrlHint ??
+                    'https://api.example.com',
+                border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.done,
               validator: (String? value) {
                 final String normalizedValue = value?.trim() ?? '';
                 if (normalizedValue.isEmpty) {
-                  return 'API URL is required';
+                  return l10n?.onboardingApiUrlRequired ?? 'API URL is required';
                 }
                 final Uri? parsed = Uri.tryParse(normalizedValue);
                 if (parsed == null ||
                     !parsed.hasScheme ||
                     (parsed.scheme != 'http' && parsed.scheme != 'https') ||
                     !parsed.hasAuthority) {
-                  return 'Enter a valid http or https URL';
+                  return l10n?.onboardingApiUrlInvalid ??
+                      'Enter a valid http or https URL';
                 }
                 return null;
               },
@@ -758,7 +781,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   ? null
                   : _scanOrganizationQrCode,
               icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scan organization QR code'),
+              label: Text(
+                l10n?.onboardingScanOrganizationQrAction ??
+                    'Scan organization QR code',
+              ),
             ),
             if (_organizationError != null) ...[
               const SizedBox(height: 12),
@@ -772,8 +798,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
               onPressed: _isCheckingOrganization ? null : _checkOrganization,
               child: Text(
                 _isCheckingOrganization
-                    ? 'Checking organization...'
-                    : 'Check organization',
+                    ? (l10n?.onboardingCheckingOrganization ??
+                        'Checking organization...')
+                    : (l10n?.onboardingCheckOrganizationAction ??
+                        'Check organization'),
               ),
             ),
             if (_isCheckingOrganization) ...[
@@ -807,18 +835,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      const Text('Continue with this organization?'),
+                      Text(
+                        l10n?.onboardingContinueWithOrganizationPrompt ??
+                            'Continue with this organization?',
+                      ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           FilledButton(
                             onPressed: _confirmOrganizationAndContinue,
-                            child: const Text('Continue'),
+                            child: Text(
+                              l10n?.onboardingContinueAction ?? 'Continue',
+                            ),
                           ),
                           const SizedBox(width: 12),
                           OutlinedButton(
                             onPressed: _clearOrganizationCheckResult,
-                            child: const Text('Cancel'),
+                            child: Text(l10n?.onboardingCancelAction ?? 'Cancel'),
                           ),
                         ],
                       ),
@@ -834,6 +867,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildJoinGroupStep(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
     final AppOrganization? organization = _primaryOrganization;
 
     return SingleChildScrollView(
@@ -842,12 +876,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Step 2: Join your first group',
+            l10n?.onboardingStep2Title ?? 'Step 2: Join your first group',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 12),
           Text(
-            'Show this QR code to your organization admin. We will keep checking until this device is assigned to a group.',
+            l10n?.onboardingStep2Body ??
+                'Show this QR code to your organization admin. We will keep checking until this device is assigned to a group.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
@@ -902,8 +937,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       Expanded(
                         child: Text(
                           _groupMembershipConfirmed
-                              ? 'Group membership confirmed.'
-                              : 'Waiting for admin assignment...',
+                              ? (l10n?.onboardingMembershipConfirmed ??
+                                  'Group membership confirmed.')
+                              : (l10n?.onboardingWaitingForAdminAssignmentShort ??
+                                  'Waiting for admin assignment...'),
                         ),
                       ),
                     ],
@@ -926,17 +963,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Card(
               child: ExpansionTile(
-                title: const Text('What is shared?'),
+                title: Text(l10n?.onboardingWhatIsSharedTitle ?? 'What is shared?'),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
                   Text(
-                    'This QR code shares the organization server URL, this installation identifier, and this device public key data so a main manager can register the device and add it to a selected group.',
+                    l10n?.onboardingWhatIsSharedBody ??
+                        'This QR code shares the organization server URL, this installation identifier, and this device public key data so a main manager can register the device and add it to a selected group.',
                     textAlign: TextAlign.left,
                   ),
                   if (_installationId != null) ...[
                     const SizedBox(height: 12),
                     SelectableText(
-                      'Installation Identifier: $_installationId',
+                      l10n?.onboardingInstallationIdentifier(_installationId!) ??
+                          'Installation Identifier: $_installationId',
                       textAlign: TextAlign.left,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -949,18 +988,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Center(
             child: TextButton(
               onPressed: _openAdminFlow,
-              child: const Text('I am a main manager'),
+              child: Text(
+                l10n?.onboardingIAmMainManagerAction ?? 'I am a main manager',
+              ),
             ),
           ),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _groupMembershipConfirmed ? () => _goToStep(2) : null,
-            child: const Text('Continue'),
+            child: Text(l10n?.onboardingContinueAction ?? 'Continue'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
             onPressed: () => _goToStep(0),
-            child: const Text('Back'),
+            child: Text(l10n?.onboardingBackAction ?? 'Back'),
           ),
         ],
       ),
@@ -968,28 +1009,32 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildPushNotificationsStep(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Step 3: Push notifications',
+            l10n?.onboardingStep3Title ?? 'Step 3: Push notifications',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 12),
           Text(
-            'Do you want to receive push notifications for new group images?',
+            l10n?.onboardingStep3Body ??
+                'Do you want to receive push notifications for new group images?',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 12),
           Text(
-            'If enabled, this device communicates with Google Firebase servers only to receive notification events. Image content is not sent to Firebase.',
+            l10n?.onboardingPushPrivacyBody ??
+                'If enabled, this device communicates with Google Firebase servers only to receive notification events. Image content is not sent to Firebase.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            'On Android 12 and lower, the system usually does not show a notification permission popup. On Android 13+ and iOS, the OS may ask for permission.',
+            l10n?.onboardingPushPermissionBody ??
+                'On Android 12 and lower, the system usually does not show a notification permission popup. On Android 13+ and iOS, the OS may ask for permission.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           if (_pushChoiceError != null) ...[
@@ -1005,7 +1050,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ? null
                 : () => _savePushChoiceAndFinish(enablePush: true),
             child: Text(
-              _isSubmittingPushChoice ? 'Applying...' : 'Enable notifications',
+              _isSubmittingPushChoice
+                  ? (l10n?.onboardingApplying ?? 'Applying...')
+                  : (l10n?.onboardingEnableNotificationsAction ??
+                      'Enable notifications'),
             ),
           ),
           const SizedBox(height: 12),
@@ -1013,12 +1061,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
             onPressed: _isSubmittingPushChoice
                 ? null
                 : () => _savePushChoiceAndFinish(enablePush: false),
-            child: const Text('Not now'),
+            child: Text(l10n?.onboardingNotNowAction ?? 'Not now'),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: _isSubmittingPushChoice ? null : () => _goToStep(1),
-            child: const Text('Back'),
+            child: Text(l10n?.onboardingBackAction ?? 'Back'),
           ),
         ],
       ),
@@ -1041,6 +1089,8 @@ class _OnboardingAdminPageState extends State<_OnboardingAdminPage> {
   bool _isRefreshing = true;
   bool _isLoggedIn = false;
   String? _username;
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -1165,8 +1215,12 @@ class _OnboardingAdminPageState extends State<_OnboardingAdminPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin Onboarding')),
+      appBar: AppBar(
+        title: Text(l10n?.onboardingAdminTitle ?? 'Admin Onboarding'),
+      ),
       body: SafeArea(
         child: _isRefreshing
             ? const Center(child: CircularProgressIndicator())
@@ -1176,14 +1230,16 @@ class _OnboardingAdminPageState extends State<_OnboardingAdminPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Main manager setup',
+                      l10n?.onboardingAdminSetupTitle ?? 'Main manager setup',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 10),
                     Text(
                       _isLoggedIn
-                          ? 'Logged in as $_username. You can now create a group or join a group.'
-                          : 'Log in with a main manager account to continue with admin actions.',
+                          ? (l10n?.onboardingAdminLoggedInAs(_username ?? '') ??
+                              'Logged in as $_username. You can now create a group or join a group.')
+                          : (l10n?.onboardingAdminLoginPrompt ??
+                              'Log in with a main manager account to continue with admin actions.'),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 24),
@@ -1191,19 +1247,26 @@ class _OnboardingAdminPageState extends State<_OnboardingAdminPage> {
                       FilledButton.icon(
                         onPressed: _openLogin,
                         icon: const Icon(Icons.login),
-                        label: const Text('Log in as main manager'),
+                        label: Text(
+                          l10n?.onboardingAdminLoginAction ??
+                              'Log in as main manager',
+                        ),
                       )
                     else ...[
                       FilledButton.icon(
                         onPressed: _openCreateGroup,
                         icon: const Icon(Icons.add),
-                        label: const Text('Create group'),
+                        label: Text(
+                          l10n?.createGroupTitle ?? 'Create group',
+                        ),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _openJoinGroup,
                         icon: const Icon(Icons.group_add),
-                        label: const Text('Join group'),
+                        label: Text(
+                          l10n?.groupsJoinGroup ?? 'Join group',
+                        ),
                       ),
                     ],
                   ],

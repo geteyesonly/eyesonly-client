@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/manager/group_notification_service.dart';
 import 'package:eyesonly/services/screen_feedback.dart';
@@ -72,9 +73,13 @@ class _GroupPushNotificationPageState extends State<GroupPushNotificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Send Message to Group'),
+        title: Text(
+          l10n?.homeSendMessageToGroup ?? 'Send Message to Group',
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -87,7 +92,8 @@ class _GroupPushNotificationPageState extends State<GroupPushNotificationPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'The notification message is fixed for privacy reasons:',
+              l10n?.groupPushFixedMessageIntro ??
+                  'The notification message is fixed for privacy reasons:',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 8),
@@ -115,7 +121,7 @@ class _GroupPushNotificationPageState extends State<GroupPushNotificationPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.send),
-                label: const Text('Send'),
+                label: Text(l10n?.sendSend ?? 'Send'),
               ),
             ),
           ],

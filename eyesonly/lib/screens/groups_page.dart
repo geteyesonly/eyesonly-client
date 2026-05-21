@@ -9,6 +9,7 @@ import 'package:eyesonly/screens/group_detail_page.dart';
 import 'package:eyesonly/screens/join_group_qr_page.dart';
 import 'package:eyesonly/screens/share_organization_qr_page.dart';
 import 'package:eyesonly/screens/main_manager/groups/create_group.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/services/api_service_support.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/device/api_endpoints.dart';
@@ -52,6 +53,8 @@ class _GroupsPageState extends State<GroupsPage> {
   bool get _canCreateGroups =>
       _managerModeEnabled &&
       (_lastLoggedInUsername?.trim().isNotEmpty ?? false);
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -138,7 +141,10 @@ class _GroupsPageState extends State<GroupsPage> {
         if (!mounted) {
           return;
         }
-        ScreenFeedback.showMessage(context, 'Manager server URL is not set.');
+        ScreenFeedback.showMessage(
+          context,
+          _l10n?.managerServerNotSet ?? 'Manager server URL is not set.',
+        );
         return;
       }
 
@@ -185,7 +191,8 @@ class _GroupsPageState extends State<GroupsPage> {
             encryptedName: group.encryptedName,
             nameNonce: group.nameNonce,
           ) ??
-          'Group ${group.uuid.substring(0, 8)}';
+          (_l10n?.groupsFallbackName(group.uuid.substring(0, 8)) ??
+              'Group ${group.uuid.substring(0, 8)}');
       entries.add(
         _GroupListEntry(
           id: group.uuid,
@@ -203,7 +210,8 @@ class _GroupsPageState extends State<GroupsPage> {
   }
 
   String _serverTimeoutMessage(AppOrganization organization) {
-    return 'Could not reach ${organization.apiUrl} within 10 seconds.';
+    return _l10n?.groupsServerTimeoutWithUrl(organization.apiUrl) ??
+        'Could not reach ${organization.apiUrl} within 10 seconds.';
   }
 
   Future<String?> _fetchOrganizationNameFromStatusEndpoint(String apiUrl) async {
@@ -370,7 +378,8 @@ class _GroupsPageState extends State<GroupsPage> {
 
       setState(() {
         _error = e is TimeoutException
-            ? 'Could not reach the server within 10 seconds.'
+            ? (_l10n?.groupsServerTimeout ??
+                'Could not reach the server within 10 seconds.')
             : e.toString();
         _isLoading = false;
       });
@@ -379,15 +388,17 @@ class _GroupsPageState extends State<GroupsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Groups'),
+        title: Text(l10n?.groupsTitle ?? 'Groups'),
         actions: [
           if (_canCreateGroups)
             IconButton(
               onPressed: _isLoading ? null : _loadGroups,
               icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh',
+              tooltip: l10n?.groupsRefresh ?? 'Refresh',
             ),
         ],
       ),
@@ -395,20 +406,28 @@ class _GroupsPageState extends State<GroupsPage> {
           ? FloatingActionButton.extended(
               onPressed: _openCreateGroupPage,
               icon: const Icon(Icons.add),
-              label: const Text('Create Group'),
+              label: Text(l10n?.groupsCreateGroup ?? 'Create Group'),
             )
           : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text('Error: $_error'))
+              ? Center(
+                  child: Text(
+                    l10n?.groupsError(_error!) ?? 'Error: $_error',
+                  ),
+                )
               : ListView(
                   children: [
                     if (_orgGroupsList.isEmpty)
-                      const ListTile(
-                        title: Text('No organizations yet'),
+                      ListTile(
+                        title: Text(
+                          l10n?.settingsNoOrganizations ??
+                              'No organizations yet',
+                        ),
                         subtitle: Text(
-                          'Add an organization to see its groups here.',
+                          l10n?.groupsAddOrganizationToSeeGroups ??
+                              'Add an organization to see its groups here.',
                         ),
                       ),
                     for (final _OrgGroups orgGroups in _orgGroupsList) ...[
@@ -430,8 +449,8 @@ class _GroupsPageState extends State<GroupsPage> {
                           ),
                         )
                       else if (orgGroups.groups.isEmpty)
-                        const ListTile(
-                          title: Text('No groups'),
+                        ListTile(
+                          title: Text(l10n?.groupsNoGroups ?? 'No groups'),
                         )
                       else
                         ...orgGroups.groups.map(
@@ -451,13 +470,16 @@ class _GroupsPageState extends State<GroupsPage> {
                             FilledButton.icon(
                               onPressed: () => _openJoinGroupPage(orgGroups),
                               icon: const Icon(Icons.group_add),
-                              label: const Text('Join Group'),
+                              label: Text(l10n?.groupsJoinGroup ?? 'Join Group'),
                             ),
                             if (_managerModeEnabled)
                               OutlinedButton.icon(
                                 onPressed: () => _openShareOrganizationPage(orgGroups),
                                 icon: const Icon(Icons.qr_code_2),
-                                label: const Text('Share Organization'),
+                                label: Text(
+                                  l10n?.groupsShareOrganization ??
+                                      'Share Organization',
+                                ),
                               ),
                           ],
                         ),
@@ -471,7 +493,10 @@ class _GroupsPageState extends State<GroupsPage> {
                         child: OutlinedButton.icon(
                           onPressed: _openAddOrganizationPage,
                           icon: const Icon(Icons.add_business),
-                          label: const Text('Add Organization'),
+                          label: Text(
+                            l10n?.settingsAddOrganization ??
+                                'Add Organization',
+                          ),
                         ),
                       ),
                     ),

@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:eyesonly/screens/home_page.dart';
 import 'package:eyesonly/screens/onboarding_page.dart';
@@ -29,12 +31,18 @@ Future<void> main() async {
 }
 
 Future<void> _enableScreenProtection() async {
-  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+  if (kIsWeb) {
     return;
   }
 
   try {
-    await ScreenProtector.preventScreenshotOn();
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await ScreenProtector.protectDataLeakageOn();
+      return;
+    }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await ScreenProtector.preventScreenshotOn();
+    }
   } on PlatformException {
     // Ignore platform-specific failures to avoid blocking app startup.
   }
@@ -68,13 +76,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late bool _useBiometricLock;
   bool _isLocked = false;
   bool _isAuthenticating = false;
+  bool _isScreenCaptureActive = false;
   String? _lockMessage;
   DateTime? _ignoreLifecycleUntil;
+
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _configureScreenCaptureMonitoring();
     _settingsStore = widget.settingsStore ?? SettingsStore();
     _currentSettings = widget.initialSettings;
     _darkMode = widget.initialSettings.darkMode;
@@ -89,8 +100,44 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _removeScreenCaptureMonitoring();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  Future<void> _configureScreenCaptureMonitoring() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+      return;
+    }
+
+    ScreenProtector.addListener(null, (bool isCaptured) {
+      if (!mounted || _isScreenCaptureActive == isCaptured) {
+        return;
+      }
+      setState(() {
+        _isScreenCaptureActive = isCaptured;
+      });
+    });
+
+    try {
+      final bool isRecording = await ScreenProtector.isRecording();
+      if (!mounted || _isScreenCaptureActive == isRecording) {
+        return;
+      }
+      setState(() {
+        _isScreenCaptureActive = isRecording;
+      });
+    } on PlatformException {
+      // Ignore platform-specific failures to avoid blocking app startup.
+    }
+  }
+
+  void _removeScreenCaptureMonitoring() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+      return;
+    }
+
+    ScreenProtector.removeListener();
   }
 
   @override
@@ -154,6 +201,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _lockMessage = null;
     });
 
+    final l10n = AppLocalizations.of(context);
     try {
       final bool isDeviceSupported =
           await (widget.deviceSupportChecker?.call() ??
@@ -164,7 +212,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         }
         setState(() {
           _isLocked = true;
-          _lockMessage = 'No device authentication is available.';
+          _lockMessage = l10n?.lockNoAuthAvailable ?? 'No authentication available.';
         });
         return;
       }
@@ -172,7 +220,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final bool didAuthenticate =
           await (widget.deviceAuthenticator?.call() ??
               _localAuthentication.authenticate(
-                localizedReason: 'Unlock Eyes Only',
+                localizedReason: l10n?.unlockReason ?? 'Unlock',
                 options: const AuthenticationOptions(),
               ));
 
@@ -182,7 +230,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       setState(() {
         _isLocked = !didAuthenticate;
-        _lockMessage = didAuthenticate ? null : 'Unlock required to continue.';
+        _lockMessage = didAuthenticate ? null : l10n?.lockUnlockRequired ?? 'Unlock required.';
       });
       if (didAuthenticate) {
         _ignoreLifecycleUntil = DateTime.now().add(const Duration(seconds: 10));
@@ -193,7 +241,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
       setState(() {
         _isLocked = true;
-        _lockMessage = error.message ?? 'Device authentication failed.';
+        _lockMessage = error.message ?? l10n?.lockAuthFailed ?? 'Authentication failed.';
       });
     } catch (_) {
       if (!mounted) {
@@ -201,7 +249,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
       setState(() {
         _isLocked = true;
-        _lockMessage = 'Device authentication failed.';
+        _lockMessage = l10n?.lockAuthFailed ?? 'Authentication failed.';
       });
     } finally {
       if (mounted) {
@@ -215,7 +263,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Eyes Only',
+      onGenerateTitle: (BuildContext context) =>
+          AppLocalizations.of(context)!.appTitle,
+      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -235,6 +291,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return Stack(
           children: [
             child ?? const SizedBox.shrink(),
+            if (_isScreenCaptureActive) const _ScreenCaptureOverlay(),
             if (_isLocked)
               _AppLockOverlay(
                 isAuthenticating: _isAuthenticating,
@@ -244,19 +301,35 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           ],
         );
       },
-      home:
-          widget.home ??
-          (_currentSettings.onboardingCompleted
-              ? MyHomePage(
-                  title: 'Eyes Only',
-                  onSettingsChanged: _reloadAppSettings,
-                )
-              : OnboardingPage(
-                  initialSettings: _currentSettings,
-                  onCompleted: () {
-                    _reloadAppSettings();
-                  },
-                )),
+      home: Builder(
+        builder: (BuildContext context) {
+          return widget.home ??
+              (_currentSettings.onboardingCompleted
+                  ? MyHomePage(
+                      title: AppLocalizations.of(context)!.appTitle,
+                      onSettingsChanged: _reloadAppSettings,
+                    )
+                  : OnboardingPage(
+                      initialSettings: _currentSettings,
+                      onCompleted: () {
+                        _reloadAppSettings();
+                      },
+                    ));
+        },
+      ),
+    );
+  }
+}
+
+class _ScreenCaptureOverlay extends StatelessWidget {
+  const _ScreenCaptureOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+      ),
     );
   }
 }
@@ -274,6 +347,8 @@ class _AppLockOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context)!;
+
     return Positioned.fill(
       child: ColoredBox(
         color: Theme.of(context).colorScheme.surface,
@@ -291,14 +366,13 @@ class _AppLockOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Eyes Only is locked',
+                    l10n.appLockedTitle,
                     style: Theme.of(context).textTheme.headlineSmall,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    message ??
-                        'Use face, fingerprint, or your device code to continue.',
+                    message ?? l10n.appLockedMessage,
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -312,7 +386,9 @@ class _AppLockOverlay extends StatelessWidget {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.fingerprint),
-                    label: Text(isAuthenticating ? 'Unlocking...' : 'Unlock'),
+                    label: Text(
+                      isAuthenticating ? l10n.unlocking : l10n.unlock,
+                    ),
                   ),
                 ],
               ),

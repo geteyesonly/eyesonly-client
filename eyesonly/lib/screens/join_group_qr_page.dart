@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/services/manager/auth_token_store.dart';
 import 'package:eyesonly/services/manager/device_registration_service.dart';
 
@@ -28,6 +29,8 @@ class _JoinGroupQrPageState extends State<JoinGroupQrPage> {
   String? _errorMessage;
   String? _qrPayload;
   String? _installationId;
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -89,8 +92,10 @@ class _JoinGroupQrPageState extends State<JoinGroupQrPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Join Group')),
+      appBar: AppBar(title: Text(l10n?.joinGroupPageTitle ?? 'Join Group')),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -119,7 +124,8 @@ class _JoinGroupQrPageState extends State<JoinGroupQrPage> {
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            'Have a main manager scan this QR code and choose the group.',
+                            l10n?.joinGroupQrInstruction ??
+                                'Have a main manager scan this QR code and choose the group.',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
@@ -128,7 +134,10 @@ class _JoinGroupQrPageState extends State<JoinGroupQrPage> {
                             constraints: const BoxConstraints(maxWidth: 420),
                             child: Card(
                               child: ExpansionTile(
-                                title: const Text('What is shared?'),
+                                title: Text(
+                                  l10n?.joinGroupQrWhatIsSharedTitle ??
+                                      'What is shared?',
+                                ),
                                 childrenPadding: const EdgeInsets.fromLTRB(
                                   16,
                                   0,
@@ -137,13 +146,17 @@ class _JoinGroupQrPageState extends State<JoinGroupQrPage> {
                                 ),
                                 children: [
                                   Text(
-                                    'This QR code shares the organization server URL, this installation identifier, and this device public key data so a main manager can register the device and add it to a selected group.',
+                                    l10n?.joinGroupQrWhatIsSharedBody ??
+                                        'This QR code shares the organization server URL, this installation identifier, and this device public key data so a main manager can register the device and add it to a selected group.',
                                     textAlign: TextAlign.left,
                                   ),
                                   if (_installationId != null) ...[
                                     const SizedBox(height: 12),
                                     SelectableText(
-                                      'Installation Identifier: $_installationId',
+                                      l10n?.joinGroupQrInstallationId(
+                                            _installationId!,
+                                          ) ??
+                                          'Installation Identifier: $_installationId',
                                       textAlign: TextAlign.left,
                                       style: Theme.of(context).textTheme.bodyMedium,
                                     ),

@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -62,12 +65,15 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -104,3 +110,37 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  # Keep this block as the single source of truth for native/web splash assets.
+  android: true
+  ios: true
+  web: true
+  color: "#f4e4ff"
+  color_dark: "#f4e4ff"
+  image: web/icons/splash-1024.png
+  image_dark: web/icons/splash-1024.png
+  android_gravity: center
+  ios_content_mode: center
+  web_image_mode: contain
+  fullscreen: true
+  # Optional: uncomment once these files exist if you want an image background.
+  # background_image: web/icons/splash-bg-light.png
+  # background_image_dark: web/icons/splash-bg-dark.png
+  android_12:
+    color: "#f4e4ff"
+    color_dark: "#f4e4ff"
+    image: web/icons/splash-1024.png
+    image_dark: web/icons/splash-1024.png
+    # Optional for Android 12 if you use background images above.
+    # icon_background_color: "#f4e4ff"
+    # icon_background_color_dark: "#1a1024"
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path_android: web/icons/Icon-512.png
+  image_path_ios: web/icons/launcher-ios-512.png
+  adaptive_icon_foreground: web/icons/Icon-512.png
+  adaptive_icon_background: "#f4e4ff"

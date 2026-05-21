@@ -12,7 +12,7 @@ const String mediaContentKeyEncryptionHkdfInfo =
 
 class EncryptedMediaUploadService {
   EncryptedMediaUploadService({ManagerApiService? managerApiService})
-      : _managerApiService = managerApiService;
+    : _managerApiService = managerApiService;
 
   final ManagerApiService? _managerApiService;
 
@@ -21,20 +21,21 @@ class EncryptedMediaUploadService {
     required String groupId,
     required Uint8List imageBytes,
     String? caption,
+    DateTime? expiresAt,
   }) async {
     final ManagerApiService managerApiService =
         _managerApiService ?? ManagerApiService(baseUrl: baseUrl);
     await managerApiService.hydrateTokens();
 
-    final List<MainManagerGroupDevice> devices =
-        await managerApiService.getMainManagerGroupDevices(groupId: groupId);
-    final List<MainManagerGroupDevice> recipients = devices.where(
-      (MainManagerGroupDevice device) {
-        final String deviceIdentifier = device.deviceIdentifier.trim();
-        final String publicKey = device.publicKey.trim();
-        return deviceIdentifier.isNotEmpty && publicKey.isNotEmpty;
-      },
-    ).toList();
+    final List<MainManagerGroupDevice> devices = await managerApiService
+        .getMainManagerGroupDevices(groupId: groupId);
+    final List<MainManagerGroupDevice> recipients = devices.where((
+      MainManagerGroupDevice device,
+    ) {
+      final String deviceIdentifier = device.deviceIdentifier.trim();
+      final String publicKey = device.publicKey.trim();
+      return deviceIdentifier.isNotEmpty && publicKey.isNotEmpty;
+    }).toList();
 
     if (recipients.isEmpty) {
       throw ApiException('No recipient devices are available for this group.');
@@ -49,9 +50,9 @@ class EncryptedMediaUploadService {
 
     final List<Map<String, dynamic>> recipientEnvelopes =
         await _buildRecipientEnvelopes(
-      recipients: recipients,
-      contentKeyBytes: contentKeyBytes,
-    );
+          recipients: recipients,
+          contentKeyBytes: contentKeyBytes,
+        );
 
     final String? encryptedCaption = await _encryptCaption(
       caption: caption,
@@ -66,8 +67,8 @@ class EncryptedMediaUploadService {
         recipientEnvelopes: recipientEnvelopes,
         encryptedCaption: encryptedCaption,
         encryptionAlgorithm: EyesOnlyCrypto.symmetricAlgorithm,
-        clientCiphertextHashSha256:
-            await _sha256Hex(encryptedBlobBytes),
+        expiresAt: expiresAt,
+        clientCiphertextHashSha256: await _sha256Hex(encryptedBlobBytes),
       ),
     );
   }
@@ -124,9 +125,9 @@ class EncryptedMediaUploadService {
 
     final ({String ciphertext, String nonce}) encryptedCaption =
         await EyesOnlyCrypto.symmetricEncrypt(
-      utf8.encode(normalizedCaption),
-      contentKeyBytes,
-    );
+          utf8.encode(normalizedCaption),
+          contentKeyBytes,
+        );
 
     return base64Encode(
       utf8.encode(

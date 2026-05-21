@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 class ScanQrCodePage extends StatefulWidget {
   const ScanQrCodePage({
     super.key,
-    this.title = 'Scan QR Code',
-    this.instruction = 'Scan the manager\'s organization QR code to fill the API URL.',
+    this.title,
+    this.instruction,
   });
 
-  final String title;
-  final String instruction;
+  final String? title;
+  final String? instruction;
 
   @override
   State<ScanQrCodePage> createState() => _ScanQrCodePageState();
@@ -47,8 +48,15 @@ class _ScanQrCodePageState extends State<ScanQrCodePage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = AppLocalizations.of(context);
+    final String title = widget.title ?? (l10n?.scanQrTitle ?? 'Scan QR Code');
+    final String instruction =
+        widget.instruction ??
+        (l10n?.scanQrInstruction ??
+            'Scan the manager\'s organization QR code to fill the API URL.');
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(title: Text(title)),
       body: Stack(
         children: [
           MobileScanner(
@@ -62,7 +70,7 @@ class _ScanQrCodePageState extends State<ScanQrCodePage> {
               color: Colors.black54,
               padding: const EdgeInsets.all(16),
               child: Text(
-                widget.instruction,
+                instruction,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white),
               ),

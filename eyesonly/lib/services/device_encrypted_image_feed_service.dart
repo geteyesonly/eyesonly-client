@@ -8,7 +8,7 @@ import 'crypto/eyes_only_crypto.dart';
 import 'device/api_service.dart';
 import 'group_display_service.dart';
 import 'manager/device_registration_keys.dart';
-import 'secure_decrypted_image_cache.dart';
+import 'secure_encrypted_image_blob_cache.dart';
 import 'settings_store.dart';
 
 const String _mediaContentKeyEncryptionHkdfInfo =
@@ -47,10 +47,7 @@ class DeviceEncryptedImageFeedSection {
 }
 
 class DeviceEncryptedImageFeedDay {
-  const DeviceEncryptedImageFeedDay({
-    required this.day,
-    required this.items,
-  });
+  const DeviceEncryptedImageFeedDay({required this.day, required this.items});
 
   final DateTime? day;
   final List<DeviceEncryptedImageFeedItem> items;
@@ -76,6 +73,7 @@ class DeviceEncryptedImageFeedItem {
     this.caption,
     this.baseUrl,
     this.groupId,
+    this.expiresAt,
   });
 
   final String imageUuid;
@@ -86,6 +84,7 @@ class DeviceEncryptedImageFeedItem {
   final String? caption;
   final String? baseUrl;
   final String? groupId;
+  final DateTime? expiresAt;
 
   bool get canDelete =>
       (baseUrl?.trim().isNotEmpty ?? false) &&
@@ -100,6 +99,7 @@ class DeviceEncryptedImageFeedItem {
     String? caption,
     Object? baseUrl = _unsetValue,
     Object? groupId = _unsetValue,
+    Object? expiresAt = _unsetValue,
   }) {
     return DeviceEncryptedImageFeedItem(
       imageUuid: imageUuid ?? this.imageUuid,
@@ -108,8 +108,15 @@ class DeviceEncryptedImageFeedItem {
       imageBytes: imageBytes ?? this.imageBytes,
       createdAt: createdAt ?? this.createdAt,
       caption: caption ?? this.caption,
-      baseUrl: identical(baseUrl, _unsetValue) ? this.baseUrl : baseUrl as String?,
-      groupId: identical(groupId, _unsetValue) ? this.groupId : groupId as String?,
+      baseUrl: identical(baseUrl, _unsetValue)
+          ? this.baseUrl
+          : baseUrl as String?,
+      groupId: identical(groupId, _unsetValue)
+          ? this.groupId
+          : groupId as String?,
+      expiresAt: identical(expiresAt, _unsetValue)
+          ? this.expiresAt
+          : expiresAt as DateTime?,
     );
   }
 }
@@ -119,25 +126,26 @@ const Object _unsetValue = Object();
 class DeviceEncryptedImageFeedService {
   DeviceEncryptedImageFeedService({
     GroupDisplayService? groupDisplayService,
-    SecureDecryptedImageCache? imageCache,
+    SecureEncryptedImageBlobCache? imageCache,
     FlutterSecureStorage? secureStorage,
   }) : _groupDisplayService = groupDisplayService ?? GroupDisplayService(),
        _imageCache = imageCache,
        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   final GroupDisplayService _groupDisplayService;
-  SecureDecryptedImageCache? _imageCache;
+    SecureEncryptedImageBlobCache? _imageCache;
   final FlutterSecureStorage _secureStorage;
 
-  SecureDecryptedImageCache get _resolvedImageCache =>
-      _imageCache ??= SecureDecryptedImageCache();
+    SecureEncryptedImageBlobCache get _resolvedImageCache =>
+      _imageCache ??= SecureEncryptedImageBlobCache();
 
   Future<void> loadFeedProgressively({
     required AppSettings settings,
     required void Function(
       List<DeviceEncryptedImageFeedSection> sections,
       bool isComplete,
-    ) onUpdate,
+    )
+    onUpdate,
   }) async {
     final List<_OrgSource> orgSources = settings.organizations.isNotEmpty
         ? settings.organizations
@@ -150,10 +158,7 @@ class DeviceEncryptedImageFeedService {
               .toList()
         : settings.deviceServerURLs
               .map(
-                (String url) => _OrgSource(
-                  organizationName: url,
-                  baseUrl: url,
-                ),
+                (String url) => _OrgSource(organizationName: url, baseUrl: url),
               )
               .toList();
 
@@ -174,13 +179,14 @@ class DeviceEncryptedImageFeedService {
         ),
       );
 
-      sections = _sortSections(
-        <DeviceEncryptedImageFeedSection>[
-          ...sections,
-          ...progressiveFeed.sections,
-        ],
+      sections = _sortSections(<DeviceEncryptedImageFeedSection>[
+        ...sections,
+        ...progressiveFeed.sections,
+      ]);
+      onUpdate(
+        List<DeviceEncryptedImageFeedSection>.unmodifiable(sections),
+        false,
       );
-      onUpdate(List<DeviceEncryptedImageFeedSection>.unmodifiable(sections), false);
 
       for (final _ProgressiveFeedItemRef itemRef in progressiveFeed.itemRefs) {
         final DeviceEncryptedImageFeedItem item = await _buildFeedItem(
@@ -205,7 +211,10 @@ class DeviceEncryptedImageFeedService {
 
     await _resolvedImageCache.pruneToActiveImageUuids(activeImageUuids);
 
-    onUpdate(List<DeviceEncryptedImageFeedSection>.unmodifiable(sections), true);
+    onUpdate(
+      List<DeviceEncryptedImageFeedSection>.unmodifiable(sections),
+      true,
+    );
   }
 
   Future<List<DeviceEncryptedImageFeedSection>> loadFeed({
@@ -215,12 +224,13 @@ class DeviceEncryptedImageFeedService {
         <DeviceEncryptedImageFeedSection>[];
     await loadFeedProgressively(
       settings: settings,
-      onUpdate: (
-        List<DeviceEncryptedImageFeedSection> nextSections,
-        bool isComplete,
-      ) {
-        sections = nextSections;
-      },
+      onUpdate:
+          (
+            List<DeviceEncryptedImageFeedSection> nextSections,
+            bool isComplete,
+          ) {
+            sections = nextSections;
+          },
     );
     return sections;
   }
@@ -242,8 +252,8 @@ class DeviceEncryptedImageFeedService {
       groupIds: groupsById.keys,
     );
 
-    final DeviceEncryptedImageListResponse response =
-        await deviceApiService.getEncryptedImages(limit: 100);
+    final DeviceEncryptedImageListResponse response = await deviceApiService
+        .getEncryptedImages(limit: 100);
     final List<DeviceEncryptedImageFeedSection> sections =
         <DeviceEncryptedImageFeedSection>[];
     final List<_ProgressiveFeedItemRef> itemRefs = <_ProgressiveFeedItemRef>[];
@@ -262,25 +272,23 @@ class DeviceEncryptedImageFeedService {
       final List<DeviceEncryptedImageFeedDay> days =
           <DeviceEncryptedImageFeedDay>[];
       final List<DeviceEncryptedImageDayGroup> sortedDayGroups =
-          List<DeviceEncryptedImageDayGroup>.from(imageGroup.days)
-            ..sort(
-              (DeviceEncryptedImageDayGroup a, DeviceEncryptedImageDayGroup b) =>
-                  (b.day ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
-                    a.day ?? DateTime.fromMillisecondsSinceEpoch(0),
-                  ),
-            );
+          List<DeviceEncryptedImageDayGroup>.from(imageGroup.days)..sort(
+            (DeviceEncryptedImageDayGroup a, DeviceEncryptedImageDayGroup b) =>
+                (b.day ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
+                  a.day ?? DateTime.fromMillisecondsSinceEpoch(0),
+                ),
+          );
 
       final String sectionId = '${source.baseUrl}::${imageGroup.groupId}';
       for (final DeviceEncryptedImageDayGroup dayGroup in sortedDayGroups) {
         final List<DeviceEncryptedImage> sortedImages =
-            List<DeviceEncryptedImage>.from(dayGroup.images)
-              ..sort(
-                (DeviceEncryptedImage a, DeviceEncryptedImage b) =>
-                    (b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0))
-                        .compareTo(
-                          a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
-                        ),
-              );
+            List<DeviceEncryptedImage>.from(dayGroup.images)..sort(
+              (DeviceEncryptedImage a, DeviceEncryptedImage b) =>
+                  (b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+                      .compareTo(
+                        a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+                      ),
+            );
         if (sortedImages.isEmpty) {
           continue;
         }
@@ -298,6 +306,7 @@ class DeviceEncryptedImageFeedService {
               createdAt: image.createdAt,
               baseUrl: source.baseUrl,
               groupId: imageGroup.groupId,
+              expiresAt: image.expiresAt,
             ),
           );
           itemRefs.add(
@@ -311,12 +320,7 @@ class DeviceEncryptedImageFeedService {
           );
         }
 
-        days.add(
-          DeviceEncryptedImageFeedDay(
-            day: dayGroup.day,
-            items: items,
-          ),
-        );
+        days.add(DeviceEncryptedImageFeedDay(day: dayGroup.day, items: items));
       }
 
       if (days.isEmpty) {
@@ -346,17 +350,18 @@ class DeviceEncryptedImageFeedService {
   ) {
     final List<DeviceEncryptedImageFeedSection> sortedSections =
         List<DeviceEncryptedImageFeedSection>.from(sections);
-    sortedSections.sort(
-      (DeviceEncryptedImageFeedSection a, DeviceEncryptedImageFeedSection b) {
-        final int orgComparison = a.organizationName.toLowerCase().compareTo(
-          b.organizationName.toLowerCase(),
-        );
-        if (orgComparison != 0) {
-          return orgComparison;
-        }
-        return a.groupName.toLowerCase().compareTo(b.groupName.toLowerCase());
-      },
-    );
+    sortedSections.sort((
+      DeviceEncryptedImageFeedSection a,
+      DeviceEncryptedImageFeedSection b,
+    ) {
+      final int orgComparison = a.organizationName.toLowerCase().compareTo(
+        b.organizationName.toLowerCase(),
+      );
+      if (orgComparison != 0) {
+        return orgComparison;
+      }
+      return a.groupName.toLowerCase().compareTo(b.groupName.toLowerCase());
+    });
     return sortedSections;
   }
 
@@ -397,43 +402,44 @@ class DeviceEncryptedImageFeedService {
     required String baseUrl,
     required String groupId,
   }) async {
-    String stage = 'cache-read';
+    String stage = 'unwrap-content-key';
 
     try {
-      final SecureDecryptedImageCacheEntry? cachedEntry =
-          await _resolvedImageCache.read(image.imageUuid);
-      if (cachedEntry != null) {
-        _logImageFeedDebug(
-          imageUuid: image.imageUuid,
-          message: 'cache hit',
-        );
-        return DeviceEncryptedImageFeedItem(
-          imageUuid: image.imageUuid,
-          isCorrupt: false,
-          imageBytes: cachedEntry.imageBytes,
-          createdAt: image.createdAt,
-          caption: cachedEntry.caption,
-          baseUrl: baseUrl,
-          groupId: groupId,
-        );
-      }
-
-      _logImageFeedDebug(
-        imageUuid: image.imageUuid,
-        message: 'cache miss',
-      );
-
-      stage = 'unwrap-content-key';
       final List<int> contentKeyBytes = await _unwrapContentKey(
         image.encryptedContentKey,
       );
 
-      stage = 'download-image-blob';
-      final Uint8List encryptedBytes = Uint8List.fromList(
-        await deviceApiService.downloadEncryptedImageBlob(
-          imageUuid: image.imageUuid,
-        ),
-      );
+      Uint8List encryptedBytes;
+      stage = 'cache-read';
+        final SecureEncryptedImageBlobCacheEntry? cachedEntry =
+          await _resolvedImageCache.read(image.imageUuid);
+      if (cachedEntry != null) {
+        _logImageFeedDebug(imageUuid: image.imageUuid, message: 'cache hit');
+        encryptedBytes = cachedEntry.encryptedBlobBytes;
+      } else {
+        _logImageFeedDebug(imageUuid: image.imageUuid, message: 'cache miss');
+
+        stage = 'download-image-blob';
+        encryptedBytes = Uint8List.fromList(
+          await deviceApiService.downloadEncryptedImageBlob(
+            imageUuid: image.imageUuid,
+          ),
+        );
+
+        stage = 'cache-write';
+        try {
+          await _resolvedImageCache.write(
+            imageUuid: image.imageUuid,
+            encryptedBlobBytes: encryptedBytes,
+          );
+        } catch (error) {
+          // Cache writes are best effort. The fetched encrypted blob is still usable.
+          _logImageFeedDebug(
+            imageUuid: image.imageUuid,
+            message: 'cache write failed: ${error.runtimeType}: $error',
+          );
+        }
+      }
 
       stage = 'decrypt-image-payload';
       final List<int> decryptedBytes = await EyesOnlyCrypto.symmetricDecrypt(
@@ -449,25 +455,8 @@ class DeviceEncryptedImageFeedService {
       );
 
       final Uint8List decryptedImageBytes = Uint8List.fromList(decryptedBytes);
-      stage = 'cache-write';
-      try {
-        await _resolvedImageCache.write(
-          imageUuid: image.imageUuid,
-          imageBytes: decryptedImageBytes,
-          caption: caption,
-        );
-      } catch (error) {
-        // Cache writes are best effort. The fresh decrypted image is still usable.
-        _logImageFeedDebug(
-          imageUuid: image.imageUuid,
-          message: 'cache write failed: ${error.runtimeType}: $error',
-        );
-      }
 
-      _logImageFeedDebug(
-        imageUuid: image.imageUuid,
-        message: 'success',
-      );
+      _logImageFeedDebug(imageUuid: image.imageUuid, message: 'success');
 
       return DeviceEncryptedImageFeedItem(
         imageUuid: image.imageUuid,
@@ -477,12 +466,12 @@ class DeviceEncryptedImageFeedService {
         caption: caption,
         baseUrl: baseUrl,
         groupId: groupId,
+        expiresAt: image.expiresAt,
       );
     } catch (error, stackTrace) {
       _logImageFeedDebug(
         imageUuid: image.imageUuid,
-        message:
-            'failed at $stage: ${error.runtimeType}: $error\n$stackTrace',
+        message: 'failed at $stage: ${error.runtimeType}: $error\n$stackTrace',
       );
       return DeviceEncryptedImageFeedItem(
         imageUuid: image.imageUuid,
@@ -490,20 +479,21 @@ class DeviceEncryptedImageFeedService {
         createdAt: image.createdAt,
         baseUrl: baseUrl,
         groupId: groupId,
+        expiresAt: image.expiresAt,
       );
     }
   }
 
-  Future<void> deleteImage({
-    required DeviceEncryptedImageFeedItem item,
-  }) async {
+  Future<void> deleteImage({required DeviceEncryptedImageFeedItem item}) async {
     final String baseUrl = item.baseUrl?.trim() ?? '';
     final String groupId = item.groupId?.trim() ?? '';
     if (baseUrl.isEmpty || groupId.isEmpty) {
       throw ApiException('Image metadata is not available for deletion.');
     }
 
-    final DeviceApiService deviceApiService = DeviceApiService(baseUrl: baseUrl);
+    final DeviceApiService deviceApiService = DeviceApiService(
+      baseUrl: baseUrl,
+    );
     await deviceApiService.deleteEncryptedImage(
       groupId: groupId,
       imageUuid: item.imageUuid,
@@ -512,15 +502,19 @@ class DeviceEncryptedImageFeedService {
   }
 
   Future<List<int>> _unwrapContentKey(String encryptedContentKey) async {
-    final String? privateKeyB64 =
-        await _secureStorage.read(key: DeviceRegistrationKeys.privateKey);
-    final String? publicKeyB64 =
-        await _secureStorage.read(key: DeviceRegistrationKeys.publicKey);
+    final String? privateKeyB64 = await _secureStorage.read(
+      key: DeviceRegistrationKeys.privateKey,
+    );
+    final String? publicKeyB64 = await _secureStorage.read(
+      key: DeviceRegistrationKeys.publicKey,
+    );
     if (privateKeyB64 == null ||
         privateKeyB64.isEmpty ||
         publicKeyB64 == null ||
         publicKeyB64.isEmpty) {
-      throw ApiException('Device key material is not available for image decryption.');
+      throw ApiException(
+        'Device key material is not available for image decryption.',
+      );
     }
 
     return EyesOnlyCrypto.unwrapWithPrivateKey(
@@ -548,7 +542,8 @@ class DeviceEncryptedImageFeedService {
         return null;
       }
 
-      final String ciphertext = (decoded['ciphertext'] as String?)?.trim() ?? '';
+      final String ciphertext =
+          (decoded['ciphertext'] as String?)?.trim() ?? '';
       final String nonce = (decoded['nonce'] as String?)?.trim() ?? '';
       if (ciphertext.isEmpty || nonce.isEmpty) {
         return null;
@@ -582,10 +577,7 @@ class DeviceEncryptedImageFeedService {
 }
 
 class _OrgSource {
-  const _OrgSource({
-    required this.organizationName,
-    required this.baseUrl,
-  });
+  const _OrgSource({required this.organizationName, required this.baseUrl});
 
   final String organizationName;
   final String baseUrl;

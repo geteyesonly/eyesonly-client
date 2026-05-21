@@ -6,13 +6,13 @@ import 'manager/auth_token_store.dart';
 import 'manager/group_content_key_store.dart';
 import 'settings_store.dart';
 import '../services/manager/device_registration_keys.dart';
-import 'secure_decrypted_image_cache.dart';
+import 'secure_encrypted_image_blob_cache.dart';
 
 class ResetService {
   static Future<void> resetApp({
     DeviceAuthTokenStore? deviceAuthTokenStore,
     AuthTokenStore? managerAuthTokenStore,
-    SecureDecryptedImageCache? imageCache,
+    SecureEncryptedImageBlobCache? imageCache,
     GroupContentKeyStore? groupContentKeyStore,
     InstallationIdStore? installationIdStore,
     FlutterSecureStorage? secureStorage,
@@ -21,7 +21,7 @@ class ResetService {
     await (deviceAuthTokenStore ?? DeviceAuthTokenStore()).clearCredentials();
     await (managerAuthTokenStore ?? AuthTokenStore()).clearTokens();
 
-    await (imageCache ?? SecureDecryptedImageCache()).clear();
+    await (imageCache ?? SecureEncryptedImageBlobCache()).clear();
     await (groupContentKeyStore ?? GroupContentKeyStore()).clearAll();
     await (installationIdStore ?? InstallationIdStore()).clear();
 

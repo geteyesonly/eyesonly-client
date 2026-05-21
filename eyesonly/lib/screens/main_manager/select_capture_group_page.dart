@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/screens/main_manager/capture_picture_page.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/group_display_service.dart';
@@ -43,6 +44,8 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
   bool _isLoading = true;
   String? _errorMessage;
   List<_CaptureGroupEntry> _groups = <_CaptureGroupEntry>[];
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -95,7 +98,8 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
               encryptedName: group.encryptedName,
               nameNonce: group.nameNonce,
             ) ??
-            'Group ${groupId.substring(0, 8)}';
+            (_l10n?.groupsFallbackName(groupId.substring(0, 8)) ??
+                'Group ${groupId.substring(0, 8)}');
 
         groups.add(
           _CaptureGroupEntry(
@@ -173,8 +177,10 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Take Picture')),
+      appBar: AppBar(title: Text(l10n?.homeTakePicture ?? 'Take Picture')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
@@ -192,18 +198,19 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
                         FilledButton.icon(
                           onPressed: _loadGroups,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
+                          label: Text(l10n?.homeRetry ?? 'Retry'),
                         ),
                       ],
                     ),
                   ),
                 )
               : _groups.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(24),
                         child: Text(
-                          'You are not a manager for any groups yet.',
+                          l10n?.selectCaptureNoManagerGroups ??
+                              'You are not a manager for any groups yet.',
                           textAlign: TextAlign.center,
                         ),
                       ),

@@ -2,6 +2,7 @@ import 'package:eyesonly/services/manager/api_service.dart';
 import 'package:eyesonly/services/manager/auth_token_store.dart';
 import 'package:eyesonly/services/settings_store.dart';
 import 'package:flutter/material.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key, this.username});
@@ -17,6 +18,8 @@ class _AccountPageState extends State<AccountPage> {
   final SettingsStore _settingsStore = SettingsStore();
   final AuthTokenStore _tokenStore = AuthTokenStore();
   bool _isLoggingOut = false;
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   Future<void> _logout() async {
     setState(() {
@@ -50,12 +53,13 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
     final String username = (widget.username == null || widget.username!.trim().isEmpty)
-        ? 'Not logged in'
+        ? (l10n?.accountNotLoggedIn ?? 'Not logged in')
         : widget.username!.trim();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      appBar: AppBar(title: Text(l10n?.homeTabAccount ?? 'Account')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -71,7 +75,11 @@ class _AccountPageState extends State<AccountPage> {
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _isLoggingOut ? null : _logout,
-                child: Text(_isLoggingOut ? 'Logging Out...' : 'Log Out'),
+                child: Text(
+                  _isLoggingOut
+                      ? (l10n?.accountLoggingOut ?? 'Logging Out...')
+                      : (l10n?.accountLogOut ?? 'Log Out'),
+                ),
               ),
             ],
           ),

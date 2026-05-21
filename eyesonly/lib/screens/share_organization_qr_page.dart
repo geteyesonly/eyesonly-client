@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 class ShareOrganizationQrPage extends StatelessWidget {
   const ShareOrganizationQrPage({
@@ -13,8 +14,12 @@ class ShareOrganizationQrPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Share Organization')),
+      appBar: AppBar(
+        title: Text(l10n?.groupsShareOrganization ?? 'Share Organization'),
+      ),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -36,7 +41,8 @@ class ShareOrganizationQrPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Have the other device scan this QR code to add this organization.',
+                  l10n?.shareOrganizationQrInstruction ??
+                      'Have the other device scan this QR code to add this organization.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),

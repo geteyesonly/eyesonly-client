@@ -14,18 +14,16 @@ const String _cacheDirectoryName = 'secure_decrypted_image_cache_v2';
 const String _cacheEntryFileExtension = '.cache';
 const Duration _cacheTtl = Duration(days: 1);
 
-class SecureDecryptedImageCacheEntry {
-  const SecureDecryptedImageCacheEntry({
-    required this.imageBytes,
-    this.caption,
+class SecureEncryptedImageBlobCacheEntry {
+  const SecureEncryptedImageBlobCacheEntry({
+    required this.encryptedBlobBytes,
   });
 
-  final Uint8List imageBytes;
-  final String? caption;
+  final Uint8List encryptedBlobBytes;
 }
 
-class SecureDecryptedImageCache {
-  SecureDecryptedImageCache({
+class SecureEncryptedImageBlobCache {
+  SecureEncryptedImageBlobCache({
     FlutterSecureStorage? secureStorage,
     Future<Directory> Function()? directoryProvider,
   }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
@@ -34,7 +32,7 @@ class SecureDecryptedImageCache {
   final FlutterSecureStorage _secureStorage;
   final Future<Directory> Function()? _directoryProvider;
 
-  Future<SecureDecryptedImageCacheEntry?> read(String imageUuid) async {
+  Future<SecureEncryptedImageBlobCacheEntry?> read(String imageUuid) async {
     final File file = await _fileForImageUuid(imageUuid);
     if (!await file.exists()) {
       return null;
@@ -70,17 +68,15 @@ class SecureDecryptedImageCache {
         return null;
       }
 
-      final String imageBytesB64 =
-          (decodedPayload['image_bytes'] as String?)?.trim() ?? '';
-      if (imageBytesB64.isEmpty) {
+      final String encryptedBlobB64 =
+          (decodedPayload['encrypted_blob_bytes'] as String?)?.trim() ?? '';
+      if (encryptedBlobB64.isEmpty) {
         await file.delete();
         return null;
       }
 
-      final String caption = (decodedPayload['caption'] as String?)?.trim() ?? '';
-      return SecureDecryptedImageCacheEntry(
-        imageBytes: Uint8List.fromList(base64Decode(imageBytesB64)),
-        caption: caption.isEmpty ? null : caption,
+      return SecureEncryptedImageBlobCacheEntry(
+        encryptedBlobBytes: Uint8List.fromList(base64Decode(encryptedBlobB64)),
       );
     } catch (_) {
       try {
@@ -92,14 +88,12 @@ class SecureDecryptedImageCache {
 
   Future<void> write({
     required String imageUuid,
-    required Uint8List imageBytes,
-    String? caption,
+    required Uint8List encryptedBlobBytes,
   }) async {
     final Directory directory = await _cacheDirectory();
     final File file = File('${directory.path}/${await _hashedFileName(imageUuid)}');
     final Map<String, dynamic> payload = <String, dynamic>{
-      'image_bytes': base64Encode(imageBytes),
-      'caption': caption,
+      'encrypted_blob_bytes': base64Encode(encryptedBlobBytes),
     };
     final ({String ciphertext, String nonce}) encryptedPayload =
         await EyesOnlyCrypto.symmetricEncrypt(

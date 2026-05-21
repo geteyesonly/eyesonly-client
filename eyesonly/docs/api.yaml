@@ -550,7 +550,29 @@ paths:
         '401':
           description: Authentication credentials were not provided.
         '403':
-          description: Only managers for the target group can perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - detail
+                properties:
+                  detail:
+                    type: string
+                  quota:
+                    type: string
+                    nullable: true
+                    description: Quota key when the request is rejected by a limit
+                      check.
+                  current:
+                    type: integer
+                    nullable: true
+                    description: Current usage value for the quota key.
+                  maximum:
+                    type: integer
+                    nullable: true
+                    description: Configured maximum value for the quota key.
+          description: Permission denied or max_images limit reached.
         '404':
           description: Group not found.
       tags:
@@ -660,7 +682,7 @@ paths:
         required: true
   /api/main-manager/register-device/:
     post:
-      operationId: createDeviceRegistration
+      operationId: registerDevice
       description: ''
       parameters: []
       requestBody:
@@ -675,12 +697,68 @@ paths:
             schema:
               $ref: '#/components/schemas/DeviceRegistration'
       responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - device_identifier
+                - public_key_algorithm
+                - device_created
+                properties:
+                  device_identifier:
+                    type: string
+                  public_key_algorithm:
+                    type: string
+                  device_created:
+                    type: boolean
+          description: Device already existed and was updated or reused.
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeviceRegistration'
-          description: ''
+                type: object
+                required:
+                - device_identifier
+                - public_key_algorithm
+                - device_created
+                properties:
+                  device_identifier:
+                    type: string
+                  public_key_algorithm:
+                    type: string
+                  device_created:
+                    type: boolean
+          description: Device registered successfully.
+        '400':
+          description: Request validation failed.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - detail
+                properties:
+                  detail:
+                    type: string
+                  quota:
+                    type: string
+                    nullable: true
+                    description: Quota key when the request is rejected by a limit
+                      check.
+                  current:
+                    type: integer
+                    nullable: true
+                    description: Current usage value for the quota key.
+                  maximum:
+                    type: integer
+                    nullable: true
+                    description: Configured maximum value for the quota key.
+          description: Permission denied or max_devices limit reached.
       tags:
       - api
   /api/main-manager/create-group/:
@@ -709,7 +787,29 @@ paths:
         '401':
           description: Authentication credentials were not provided.
         '403':
-          description: Only staff users can perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - detail
+                properties:
+                  detail:
+                    type: string
+                  quota:
+                    type: string
+                    nullable: true
+                    description: Quota key when the request is rejected by a limit
+                      check.
+                  current:
+                    type: integer
+                    nullable: true
+                    description: Current usage value for the quota key.
+                  maximum:
+                    type: integer
+                    nullable: true
+                    description: Configured maximum value for the quota key.
+          description: Permission denied or max_groups limit reached.
       tags:
       - api
   /api/main-manager/create-group-key-envelope/:

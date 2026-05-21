@@ -1,0 +1,430 @@
+{
+  "settingsTitle": "Settings",
+  "settingsGeneral": "General",
+  "settingsDeviceLock": "Device Lock",
+  "settingsDeviceLockSubtitle": "Require face, fingerprint, or device code",
+  "settingsPushNotifications": "Push Notifications",
+  "settingsPushNotificationsSubtitle": "Receive notifications when new pictures are uploaded",
+  "settingsDarkMode": "Dark Mode",
+  "settingsDarkModeSubtitle": "Use a darker appearance at night",
+  "settingsManagerMode": "Manager Mode",
+  "settingsManagerModeSubtitle": "Enable manager mode features",
+  "settingsOrganizations": "Organizations",
+  "settingsNoOrganizations": "No organizations yet",
+  "settingsNoOrganizationsSubtitle": "Add an organization to connect this device.",
+  "settingsAddOrganization": "Add Organization",
+  "settingsManagerSettings": "Manager Settings",
+  "settingsManagerOrganization": "Manager Organization",
+  "settingsManagerAddOrgFirst": "Add an organization first to select a manager server.",
+  "settingsDeleteImageCache": "Delete Encrypted Image Cache",
+  "settingsDeleteImageCacheSubtitle": "Remove locally cached encrypted image blobs",
+  "settingsResetApp": "Reset App",
+  "settingsResetAppSubtitle": "Remove local keys, tokens, organizations, and app settings",
+  "settingsAppVersion": "App Version",
+  "settingsRemoveOrganizationTitle": "Remove Organization",
+  "settingsRemoveOrganizationContent": "Do you want to remove {name} from this device?\n\nThis only removes the local organization entry.",
+  "@settingsRemoveOrganizationContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDeleteCache": "Delete Cache",
+  "settingsDeleteImageCacheDialogTitle": "Delete Encrypted Image Cache",
+  "settingsDeleteImageCacheDialogContent": "Delete all locally cached encrypted image blobs from this device?\n\nThe next time you open Photos, encrypted blobs will be fetched again and decrypted when viewed.",
+  "settingsImageCacheDeleted": "Image cache deleted.",
+  "settingsImageCacheDeleteFailed": "Could not delete image cache: {error}",
+  "@settingsImageCacheDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAddOrgFirst": "Add an organization first.",
+  "settingsResetAppDialogTitle": "Reset App",
+  "settingsResetAppDialogContent": "Warning: Resetting the app will remove local keys, tokens, installation identity, organizations, cached images, and app settings. This action cannot be undone.\n\nAre you sure you want to continue?",
+  "settingsReset": "Reset",
+  "settingsDeviceLockNotAvailable": "No device authentication is available on this device.",
+  "settingsDeviceLockNotEnabled": "Device lock was not enabled.",
+  "settingsPushNotificationsFailed": "Could not update push notifications: {error}",
+  "@settingsPushNotificationsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAppVersionValue": "1.0.0",
+  "@@locale": "en",
+  "appTitle": "Eyes Only",
+  "unlockReason": "Unlock Eyes Only",
+  "lockNoAuthAvailable": "No device authentication is available.",
+  "lockUnlockRequired": "Unlock required to continue.",
+  "lockAuthFailed": "Device authentication failed.",
+  "appLockedTitle": "Eyes Only is locked",
+  "appLockedMessage": "Use face, fingerprint, or your device code to continue.",
+  "unlocking": "Unlocking...",
+  "unlock": "Unlock",
+
+  "homeMenu": "Menu",
+  "homeTabPhotos": "Photos",
+  "homeTabGroups": "Groups",
+  "homeTabAccount": "Account",
+  "homeTabLogIn": "Log In",
+  "homeTabSettings": "Settings",
+  "homeTabAbout": "About",
+  "managerServerNotSet": "Manager server URL is not set.",
+  "notifyWhenImagesLoading": "This group cannot be notified until its images finish loading.",
+  "notificationSent": "Notification sent to {count} devices.",
+  "@notificationSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationSentWithSkipped": "Notification sent to {notified} devices. {skipped} were skipped.",
+  "@notificationSentWithSkipped": {
+    "placeholders": {
+      "notified": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "imageDeleted": "Image deleted.",
+  "homeTakePicture": "Take Picture",
+  "homeSendMessageToGroup": "Send Message to Group",
+  "homeRetry": "Retry",
+  "homeNoImages": "Currently there are no images for you",
+  "homeNoGroupsYet": "You are not in any groups yet.",
+  "homeJoinGroup": "Join Group",
+  "groupsTitle": "Groups",
+  "groupsRefresh": "Refresh",
+  "groupsCreateGroup": "Create Group",
+  "groupsError": "Error: {message}",
+  "@groupsError": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "groupsAddOrganizationToSeeGroups": "Add an organization to see its groups here.",
+  "groupsNoGroups": "No groups",
+  "groupsJoinGroup": "Join Group",
+  "groupsLeaveGroup": "Leave Group",
+  "groupsShareOrganization": "Share Organization",
+  "groupsFallbackName": "Group {shortId}",
+  "@groupsFallbackName": {
+    "placeholders": {
+      "shortId": {}
+    }
+  },
+  "groupsServerTimeoutWithUrl": "Could not reach {apiUrl} within 10 seconds.",
+  "@groupsServerTimeoutWithUrl": {
+    "placeholders": {
+      "apiUrl": {}
+    }
+  },
+  "groupsServerTimeout": "Could not reach the server within 10 seconds.",
+  "homeApiUnreachable": "Could not reach the API. Please check your connection and try again.",
+  "homeLoadingImages": "Loading images...",
+  "homeUnknownDay": "Unknown day",
+  "homeDeleteImageTitle": "Delete Image",
+  "homeDeleteImageConfirm": "Delete this image from the server for this group? This action cannot be undone.",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "homeCollapseCaption": "Collapse caption",
+  "homeShowCaption": "Show caption",
+  "homeDeleteImageTooltip": "Delete image",
+  "failedToDecryptImage": "Failed to decrypt image",
+
+  "captureNoCameraAvailable": "No camera is available on this device.",
+  "pictureDeleted": "Picture deleted.",
+  "flashAuto": "Flash Auto",
+  "flashOn": "Flash On",
+  "flashOff": "Flash Off",
+  "retryCamera": "Retry Camera",
+  "switchCamera": "Switch Camera",
+
+  "sendTitle": "Send",
+  "sendSuccess": "Encrypted image sent to {count} devices.",
+  "@sendSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sendAddTextLabel": "Add text",
+  "sendAddTextHint": "Add optional text for this image",
+  "sendDelete": "Delete",
+  "sendSending": "Sending...",
+  "sendSend": "Send",
+  "sendSelectExpirationTitle": "Select deletion time",
+  "close": "Close",
+  "sendPhotoExpiration": "Will be deleted at",
+  "expiresToday": "Will be deleted today",
+
+  "createGroupTitle": "Create Group",
+  "createGroupHeading": "New Group",
+  "createGroupNameLabel": "Name",
+  "createGroupNameRequired": "Name is required",
+  "createGroupCreating": "Creating...",
+  "createGroupSuccess": "Group created successfully.",
+  "createGroupCreatorNotLinkedError": "Creator device was not linked to the new group.",
+  "createGroupNoLoggedInManagerError": "No logged-in manager account found for device registration.",
+  "createGroupNoUuidError": "Group was created but server returned no UUID.",
+
+  "joinGroupPageTitle": "Join Group",
+  "joinGroupQrInstruction": "Have a main manager scan this QR code and choose the group.",
+  "joinGroupQrWhatIsSharedTitle": "What is shared?",
+  "joinGroupQrWhatIsSharedBody": "This QR code shares the organization server URL, this installation identifier, and this device public key data so a main manager can register the device and add it to a selected group.",
+  "joinGroupQrInstallationId": "Installation Identifier: {installationId}",
+  "@joinGroupQrInstallationId": {
+    "placeholders": {
+      "installationId": {}
+    }
+  },
+
+  "aboutInstallationIdentifier": "Installation Identifier",
+  "aboutHiddenValue": "Hidden",
+  "aboutHideIdentifier": "Hide Identifier",
+  "aboutShowIdentifier": "Show Identifier",
+
+  "accountNotLoggedIn": "Not logged in",
+  "accountLoggingOut": "Logging Out...",
+  "accountLogOut": "Log Out",
+
+  "shareOrganizationQrInstruction": "Have the other device scan this QR code to add this organization.",
+  "groupPushFixedMessageIntro": "The notification message is fixed for privacy reasons:",
+  "selectCaptureNoManagerGroups": "You are not a manager for any groups yet.",
+
+  "loginRegisterThisDeviceTitle": "Register This Device",
+  "loginRegisterThisDeviceContent": "This device is not registered yet. On your already-registered manager device, tap \"Register Manager Device\" and scan the QR code shown here.",
+  "loginLater": "Later",
+  "loginShowQrCode": "Show QR Code",
+  "loginServerUrlNotSet": "Server URL is not set. Configure it in Settings.",
+  "loginSuccessful": "Login successful",
+  "loginFailedTryAgain": "Login failed. Please try again.",
+  "loginManagerTitle": "Manager Login",
+  "loginOnlyMessage": "This app supports login only. Registration is disabled.",
+  "loginUsernameLabel": "Username",
+  "loginUsernameRequired": "Username is required",
+  "loginPasswordLabel": "Password",
+  "loginPasswordRequired": "Password is required",
+  "loginLoggingIn": "Logging In...",
+
+  "scanQrTitle": "Scan QR Code",
+  "scanQrInstruction": "Scan the manager's organization QR code to fill the API URL.",
+  "scanQrInvalidJson": "The scanned QR code did not contain valid JSON data.",
+
+  "addOrganizationApiUrlLabel": "API URL",
+  "addOrganizationApiUrlHint": "https://api.example.com",
+  "addOrganizationApiUrlRequired": "API URL is required",
+  "addOrganizationApiUrlInvalid": "Enter a valid http or https URL",
+  "addOrganizationApiUrlDuplicate": "This API URL has already been added",
+  "addOrganizationChecking": "Checking organization...",
+  "addOrganizationCheckAction": "Check Organization",
+  "addOrganizationConfirmPrompt": "Add this organization?",
+  "addOrganizationAdd": "Add",
+  "addOrganizationCancel": "Cancel",
+  "addOrganizationInvalidQr": "The scanned QR code did not contain a valid API URL.",
+  "addOrganizationUnreachable": "Could not reach the server. Please check the URL and your network connection.",
+  "addOrganizationTimeout": "Could not reach the server within 10 seconds.",
+  "addOrganizationUnexpectedStatus": "Server returned an unexpected status ({statusCode}). Please check the URL.",
+  "@addOrganizationUnexpectedStatus": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+
+  "groupAddScanDeviceTitle": "Scan Device",
+  "groupAddScanDeviceInstruction": "Scan the device QR code to capture its installation identifier and public key.",
+  "groupAddServerUrlMismatchTitle": "Server URL mismatch",
+  "groupAddServerUrlMismatchBody": "The scanned device is registered to a different server address than the one you are currently managing. This may be normal if the same server is reachable at multiple addresses (e.g. emulator vs. physical device on the same network).",
+  "groupAddCurrentServerLabel": "Current server:",
+  "groupAddDeviceServerLabel": "Device server:",
+  "groupAddServerUrlMismatchWarning": "Only continue if you are sure both addresses point to the same server.",
+  "groupAddCancel": "Cancel",
+  "groupAddAddAnyway": "Add anyway",
+  "groupAddAddedMember": "Added {name} to {groupName}.",
+  "@groupAddAddedMember": {
+    "placeholders": {
+      "name": {},
+      "groupName": {}
+    }
+  },
+  "groupAddStatusReady": "Ready",
+  "groupAddStatusRequired": "Required",
+  "groupAddDeviceTitle": "Add Device",
+  "groupAddNameLabel": "Name",
+  "groupAddNameHint": "Enter a name for this device",
+  "groupAddNameRequired": "Name is required",
+  "groupAddDeviceLabel": "Device",
+  "groupAddScanDeviceAction": "Scan Device",
+  "groupAddAddingDevice": "Adding Device...",
+  "groupAddDeviceAction": "Add Device",
+  "groupAddNotJoinCode": "The scanned QR code is not a device join code.",
+  "groupAddMissingManagerRequestData": "The scanned QR code is missing manager request data.",
+  "groupAddMissingRegisterData": "The scanned QR code is missing register-device data.",
+  "groupAddMissingRequiredData": "The scanned QR code is missing required device data.",
+  "groupAddManagerDeviceTitle": "Add Manager Device",
+  "groupAddManagerInstruction": "Scan the QR code shown on the other manager's device (Groups → Join Group) while they are logged in as a manager.",
+  "groupAddManagerDeviceAction": "Add Manager Device",
+  "groupAddManagerScanTitle": "Scan Manager Device",
+  "groupAddManagerScanInstruction": "On the other manager's device, go to Groups → Join Group and scan the QR code shown there.",
+  "groupAddManagerServerUrlMismatchBody": "The scanned device reports a different server address. This may be normal if both addresses point to the same server (e.g. emulator vs. physical device).",
+  "groupAddManagerMissingOwnerUser": "This QR code does not include a manager account. Make sure the other manager is logged in before showing the QR code.",
+
+  "registerManagerDeviceTitle": "Register Manager Device",
+  "registerManagerDeviceInstruction": "Scan the QR code shown on the second manager device (Groups → Join Group) to register it as an additional device for your account.",
+  "registerManagerDeviceGenerating": "Generating...",
+  "registerManagerDeviceGenerateQrCode": "Generate QR Code",
+  "registerManagerDeviceServerUrlMismatchTitle": "Server URL mismatch",
+  "registerManagerDeviceServerUrlMismatchBody": "The scanned device is registered to a different server address. This may be normal if both addresses point to the same server (e.g. emulator vs. physical device on the same network).",
+  "registerManagerDeviceCurrentServerLabel": "Current server:",
+  "registerManagerDeviceDeviceServerLabel": "Device server:",
+  "registerManagerDeviceServerUrlMismatchWarning": "Only continue if you are sure both addresses point to the same server.",
+  "registerManagerDeviceCancel": "Cancel",
+  "registerManagerDeviceContinue": "Continue",
+  "registerManagerDeviceSuccess": "Device registered successfully.",
+  "registerManagerDeviceScanned": "Device scanned",
+  "registerManagerDeviceScanRequired": "Scan required",
+  "registerManagerDeviceScanDeviceQr": "Scan Device QR",
+  "registerManagerDeviceRegistering": "Registering...",
+  "registerManagerDeviceRegisterAction": "Register Device",
+  "registerManagerDeviceScanInstruction": "On the second device, go to Groups → Join Group and scan that QR code here.",
+  "registerManagerDeviceNotJoinCode": "The scanned QR code is not a device join code.",
+  "registerManagerDeviceMissingManagerRequestData": "The scanned QR code is missing manager request data.",
+  "registerManagerDeviceMissingRegisterData": "The scanned QR code is missing register-device data.",
+  "registerManagerDeviceMissingRequiredData": "The scanned QR code is missing required device data.",
+
+  "groupDetailDecryptionFailed": "Decryption failed",
+  "groupDetailRemovedFromGroup": "Removed {ownerName} from the group.",
+  "@groupDetailRemovedFromGroup": {
+    "placeholders": {
+      "ownerName": {}
+    }
+  },
+  "groupDetailRemoveDeviceTitle": "Remove Device?",
+  "groupDetailRemoveDevicePrompt": "Remove {ownerName} from this group?",
+  "@groupDetailRemoveDevicePrompt": {
+    "placeholders": {
+      "ownerName": {}
+    }
+  },
+  "groupDetailCancel": "Cancel",
+  "groupDetailRemoveAction": "Remove",
+  "groupDetailLeaveGroupTitle": "Leave Group?",
+  "groupDetailLeaveGroupPrompt": "Do you really want to leave {groupName}?\n\nOnly a manager can re-add you to this group.",
+  "@groupDetailLeaveGroupPrompt": {
+    "placeholders": {
+      "groupName": {}
+    }
+  },
+  "groupDetailLeaveAction": "Leave",
+  "groupDetailNotificationSent": "Notification sent to {notifiedCount} devices.",
+  "@groupDetailNotificationSent": {
+    "placeholders": {
+      "notifiedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "groupDetailNotificationSentSkipped": "Notification sent to {notifiedCount} devices. {skippedCount} were skipped.",
+  "@groupDetailNotificationSentSkipped": {
+    "placeholders": {
+      "notifiedCount": {
+        "type": "int"
+      },
+      "skippedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "groupsRefreshTooltip": "Refresh",
+  "groupDetailAddMember": "Add Member",
+  "groupDetailShowInstallationIdentifiers": "Show installation identifiers",
+  "groupDetailNoDevicesInGroup": "No devices in this group.",
+
+  "onboardingWelcomeTitle": "Welcome to Eyes Only",
+  "onboardingOrganizationUnreachable": "Could not reach the server. Please check the URL and your network connection.",
+  "onboardingOrganizationInvalidQr": "The scanned QR code did not contain a valid organization API URL.",
+  "onboardingUnexpectedStatus": "Server returned an unexpected status ({statusCode}). Please check the URL.",
+  "@onboardingUnexpectedStatus": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingTimeout": "Could not reach the server within 10 seconds.",
+  "onboardingCompleteOrganizationFirst": "Complete organization setup first.",
+  "onboardingWaitingForAdminAssignment": "Waiting for admin assignment before next step.",
+  "onboardingStep1Title": "Step 1: Connect your organization",
+  "onboardingStep1Body": "Enter your organization API URL. We will verify it before continuing.",
+  "onboardingOrganizationApiUrlLabel": "Organization API URL",
+  "onboardingOrganizationApiUrlHint": "https://api.example.com",
+  "onboardingApiUrlRequired": "API URL is required",
+  "onboardingApiUrlInvalid": "Enter a valid http or https URL",
+  "onboardingScanOrganizationQrAction": "Scan organization QR code",
+  "onboardingCheckingOrganization": "Checking organization...",
+  "onboardingCheckOrganizationAction": "Check organization",
+  "onboardingContinueWithOrganizationPrompt": "Continue with this organization?",
+  "onboardingContinueAction": "Continue",
+  "onboardingCancelAction": "Cancel",
+  "onboardingStep2Title": "Step 2: Join your first group",
+  "onboardingStep2Body": "Show this QR code to your organization admin. We will keep checking until this device is assigned to a group.",
+  "onboardingMembershipConfirmed": "Group membership confirmed.",
+  "onboardingWaitingForAdminAssignmentShort": "Waiting for admin assignment...",
+  "onboardingWhatIsSharedTitle": "What is shared?",
+  "onboardingWhatIsSharedBody": "This QR code shares the organization server URL, this installation identifier, and this device public key data so a main manager can register the device and add it to a selected group.",
+  "onboardingInstallationIdentifier": "Installation Identifier: {installationId}",
+  "@onboardingInstallationIdentifier": {
+    "placeholders": {
+      "installationId": {}
+    }
+  },
+  "onboardingIAmMainManagerAction": "I am a main manager",
+  "onboardingBackAction": "Back",
+  "onboardingStep3Title": "Step 3: Push notifications",
+  "onboardingStep3Body": "Do you want to receive push notifications for new group images?",
+  "onboardingPushPrivacyBody": "If enabled, this device communicates with Google Firebase servers only to receive notification events. Image content is not sent to Firebase.",
+  "onboardingPushPermissionBody": "On Android 12 and lower, the system usually does not show a notification permission popup. On Android 13+ and iOS, the OS may ask for permission.",
+  "onboardingApplying": "Applying...",
+  "onboardingEnableNotificationsAction": "Enable notifications",
+  "onboardingNotNowAction": "Not now",
+  "onboardingScanOrganizationQrTitle": "Scan Organization QR Code",
+  "onboardingScanOrganizationQrInstruction": "Scan the main manager organization QR code to fill the API URL.",
+  "onboardingAdminTitle": "Admin Onboarding",
+  "onboardingAdminSetupTitle": "Main manager setup",
+  "onboardingAdminLoggedInAs": "Logged in as {username}. You can now create a group or join a group.",
+  "@onboardingAdminLoggedInAs": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "onboardingAdminLoginPrompt": "Log in with a main manager account to continue with admin actions.",
+  "onboardingAdminLoginAction": "Log in as main manager",
+
+  "expirationOneDay": "1 day",
+  "expirationThreeDays": "3 days",
+  "expirationSevenDays": "7 days",
+  "expirationFourteenDays": "14 days",
+  "expirationOneMonth": "1 month",
+  "expirationExpired": "Deleted",
+  "expirationInDays": "{days, plural, =1{Will be deleted in 1 day} other{Will be deleted in {days} days}}",
+  "@expirationInDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
+}

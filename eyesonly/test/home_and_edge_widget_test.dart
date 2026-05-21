@@ -3,14 +3,29 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/screens/main_manager/groups/group_push_notification_page.dart';
 import 'package:eyesonly/screens/home_page.dart';
 import 'package:eyesonly/screens/add_organization_page.dart';
 import 'package:eyesonly/screens/settings_page.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/device_encrypted_image_feed_service.dart';
-import 'package:eyesonly/services/secure_decrypted_image_cache.dart';
+import 'package:eyesonly/services/secure_encrypted_image_blob_cache.dart';
 import 'package:eyesonly/services/settings_store.dart';
+
+Widget buildTestApp(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
+}
 
 void main() {
   group('MyHomePage', () {
@@ -18,8 +33,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -49,8 +64,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -75,7 +90,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Could not reach your device server'),
+        find.textContaining('Could not reach'),
         findsOneWidget,
       );
       expect(find.text('Retry'), findsOneWidget);
@@ -85,8 +100,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -120,8 +135,8 @@ void main() {
 
     testWidgets('renders progressive feed sections', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -181,8 +196,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -249,8 +264,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -312,8 +327,8 @@ void main() {
       String? deletedImageUuid;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -394,8 +409,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -441,8 +456,8 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: settingsStore,
             membershipChecker: (_) async => false,
@@ -478,8 +493,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: MyHomePage(
+        buildTestApp(
+          MyHomePage(
             title: 'Eyes Only',
             settingsStore: FakeSettingsStore(
               const AppSettings(
@@ -510,8 +525,8 @@ void main() {
   group('AddOrganizationPage edge cases', () {
     testWidgets('rejects duplicate API URLs', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: AddOrganizationPage(
+        buildTestApp(
+          AddOrganizationPage(
             settingsStore: FakeSettingsStore(
               const AppSettings(
                 managerModeEnabled: false,
@@ -549,8 +564,8 @@ void main() {
       final FakeSettingsStore settingsStore = FakeSettingsStore(AppSettings.defaults);
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: AddOrganizationPage(
+        buildTestApp(
+          AddOrganizationPage(
             settingsStore: settingsStore,
             statusFetcher: (_) async => (orgName: 'Local', error: null),
           ),
@@ -570,8 +585,8 @@ void main() {
 
     testWidgets('invalid QR scan shows a message', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: AddOrganizationPage(
+        buildTestApp(
+          AddOrganizationPage(
             settingsStore: FakeSettingsStore(AppSettings.defaults),
             scanQrCode: (_) async => 'not a url',
           ),
@@ -608,8 +623,8 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: SettingsPage(
+        buildTestApp(
+          SettingsPage(
             settingsStore: settingsStore,
             deviceSupportChecker: () async => false,
           ),
@@ -644,8 +659,8 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: SettingsPage(
+        buildTestApp(
+          SettingsPage(
             settingsStore: settingsStore,
             deviceSupportChecker: () async => true,
             deviceAuthenticator: () async => false,
@@ -665,8 +680,8 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: SettingsPage(
+        buildTestApp(
+          SettingsPage(
             settingsStore: FakeSettingsStore(AppSettings.defaults),
             imageCache: ThrowingImageCache(),
           ),
@@ -674,8 +689,11 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('Delete Image Cache'), 200);
-      await tester.tap(find.text('Delete Image Cache'));
+      await tester.scrollUntilVisible(
+        find.text('Delete Encrypted Image Cache'),
+        200,
+      );
+      await tester.tap(find.text('Delete Encrypted Image Cache'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Delete Cache'));
       await tester.pumpAndSettle();
@@ -835,7 +853,7 @@ class _AutoPopActionPageState extends State<_AutoPopActionPage> {
   Widget build(BuildContext context) => const Scaffold(body: SizedBox.shrink());
 }
 
-class ThrowingImageCache extends SecureDecryptedImageCache {
+class ThrowingImageCache extends SecureEncryptedImageBlobCache {
   @override
   Future<void> clear() async {
     throw 'cache failed';

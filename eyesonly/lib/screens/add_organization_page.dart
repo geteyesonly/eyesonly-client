@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:http/http.dart' as http;
 
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/screens/scan_qr_code_page.dart';
 import 'package:eyesonly/services/api_service_support.dart';
 import 'package:eyesonly/services/device/api_endpoints.dart';
@@ -47,6 +48,8 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
   String? _confirmedApiUrl;
   String? _confirmedOrgName;
   List<AppOrganization> _existingOrganizations = <AppOrganization>[];
+
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -175,7 +178,7 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return (
           orgName: null,
-          error:
+          error: _l10n?.addOrganizationUnexpectedStatus(response.statusCode) ??
               'Server returned an unexpected status (${response.statusCode}). Please check the URL.',
         );
       }
@@ -195,12 +198,13 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
     } on TimeoutException {
       return (
         orgName: null,
-        error: 'Could not reach the server within 10 seconds.',
+        error: _l10n?.addOrganizationTimeout ??
+            'Could not reach the server within 10 seconds.',
       );
     } catch (_) {
       return (
         orgName: null,
-        error:
+        error: _l10n?.addOrganizationUnreachable ??
             'Could not reach the server. Please check the URL and your network connection.',
       );
     }
@@ -228,7 +232,8 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
         !parsed.hasAuthority) {
       ScreenFeedback.showMessage(
         context,
-        'The scanned QR code did not contain a valid API URL.',
+        _l10n?.addOrganizationInvalidQr ??
+            'The scanned QR code did not contain a valid API URL.',
       );
       return;
     }
@@ -246,8 +251,12 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Organization')),
+      appBar: AppBar(
+        title: Text(l10n?.settingsAddOrganization ?? 'Add Organization'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -258,27 +267,31 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
               children: [
                 TextFormField(
                   controller: _apiUrlController,
-                  decoration: const InputDecoration(
-                    labelText: 'API URL',
-                    hintText: 'https://api.example.com',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n?.addOrganizationApiUrlLabel ?? 'API URL',
+                    hintText: l10n?.addOrganizationApiUrlHint ??
+                        'https://api.example.com',
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.url,
                   textInputAction: TextInputAction.done,
                   validator: (String? value) {
                     final String normalizedValue = value?.trim() ?? '';
                     if (normalizedValue.isEmpty) {
-                      return 'API URL is required';
+                      return l10n?.addOrganizationApiUrlRequired ??
+                          'API URL is required';
                     }
                     final Uri? parsed = Uri.tryParse(normalizedValue);
                     if (parsed == null ||
                         !parsed.hasScheme ||
                         (parsed.scheme != 'http' && parsed.scheme != 'https') ||
                         !parsed.hasAuthority) {
-                      return 'Enter a valid http or https URL';
+                      return l10n?.addOrganizationApiUrlInvalid ??
+                          'Enter a valid http or https URL';
                     }
                     if (_apiUrlExists(normalizedValue)) {
-                      return 'This API URL has already been added';
+                      return l10n?.addOrganizationApiUrlDuplicate ??
+                          'This API URL has already been added';
                     }
                     return null;
                   },
@@ -290,7 +303,11 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
                       ? null
                       : _checkServer,
                   child: Text(
-                    _isSaving ? 'Checking organization...' : 'Check Organization',
+                    _isSaving
+                        ? (l10n?.addOrganizationChecking ??
+                            'Checking organization...')
+                        : (l10n?.addOrganizationCheckAction ??
+                            'Check Organization'),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -332,18 +349,21 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
                             ),
                           ],
                           const SizedBox(height: 16),
-                          const Text('Add this organization?'),
+                          Text(
+                            l10n?.addOrganizationConfirmPrompt ??
+                                'Add this organization?',
+                          ),
                           const SizedBox(height: 12),
                           Row(
                             children: [
                               FilledButton(
                                 onPressed: _confirmAndSave,
-                                child: const Text('Add'),
+                                child: Text(l10n?.addOrganizationAdd ?? 'Add'),
                               ),
                               const SizedBox(width: 12),
                               OutlinedButton(
                                 onPressed: _cancelConfirmation,
-                                child: const Text('Cancel'),
+                                child: Text(l10n?.addOrganizationCancel ?? 'Cancel'),
                               ),
                             ],
                           ),
@@ -356,7 +376,7 @@ class _AddOrganizationPageState extends State<AddOrganizationPage> {
                 OutlinedButton.icon(
                   onPressed: _openScanQrCodePage,
                   icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scan QR Code'),
+                  label: Text(l10n?.scanQrTitle ?? 'Scan QR Code'),
                 ),
               ],
             ),

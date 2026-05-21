@@ -10,19 +10,19 @@ import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/device/api_service.dart';
 import 'package:eyesonly/services/device_encrypted_image_feed_service.dart';
 import 'package:eyesonly/services/manager/group_notification_service.dart';
+import 'package:eyesonly/services/photo_expiration.dart';
 import 'package:eyesonly/services/screen_feedback.dart';
 import 'package:eyesonly/services/settings_store.dart';
 import 'package:flutter/material.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
-typedef DeviceMembershipChecker = Future<bool?> Function(
-  List<String> deviceServerUrls,
-);
+typedef DeviceMembershipChecker =
+    Future<bool?> Function(List<String> deviceServerUrls);
 typedef GroupsPageBuilder = Widget Function(BuildContext context);
 typedef AddOrganizationPageBuilder = Widget Function(BuildContext context);
-typedef CaptureGroupPageBuilder = Widget Function(
-  BuildContext context,
-  String baseUrl,
-);
+typedef CaptureGroupPageBuilder =
+    Widget Function(BuildContext context, String baseUrl);
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({
@@ -51,7 +51,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static const String _noGroupsYetMessage = 'You are not in any groups yet.';
+  AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   late final SettingsStore _settingsStore;
   late final DeviceEncryptedImageFeedService _imageFeedService;
@@ -151,7 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
         _imageErrorMessage = null;
         _startupErrorMessage =
             settings.deviceServerURLs.isNotEmpty && isInGroup == null
-            ? 'Could not reach your device server. Please check your network connection and server availability, then try again.'
+            ? _l10n.homeApiUnreachable
             : null;
       });
 
@@ -169,8 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
         _isInGroup = null;
         _imageSections = <DeviceEncryptedImageFeedSection>[];
         _imageErrorMessage = null;
-        _startupErrorMessage =
-            'An error occurred while loading startup data. Please try again.';
+        _startupErrorMessage = _l10n.homeApiUnreachable;
       });
     }
   }
@@ -182,20 +181,18 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       await _imageFeedService.loadFeedProgressively(
         settings: settings,
-        onUpdate: (
-          List<DeviceEncryptedImageFeedSection> sections,
-          bool isComplete,
-        ) {
-          if (!mounted || loadGeneration != _imageLoadGeneration) {
-            return;
-          }
+        onUpdate:
+            (List<DeviceEncryptedImageFeedSection> sections, bool isComplete) {
+              if (!mounted || loadGeneration != _imageLoadGeneration) {
+                return;
+              }
 
-          setState(() {
-            _imageSections = sections;
-            _isLoadingImages = !isComplete;
-            _imageErrorMessage = null;
-          });
-        },
+              setState(() {
+                _imageSections = sections;
+                _isLoadingImages = !isComplete;
+                _imageErrorMessage = null;
+              });
+            },
       );
     } on ApiException catch (error) {
       if (!mounted || loadGeneration != _imageLoadGeneration) {
@@ -224,7 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     if (baseUrl.isEmpty) {
-      ScreenFeedback.showMessage(context, 'Manager server URL is not set.');
+      ScreenFeedback.showMessage(context, _l10n.managerServerNotSet);
       return;
     }
 
@@ -233,9 +230,7 @@ class _MyHomePageState extends State<MyHomePage> {
       MaterialPageRoute<void>(
         builder: (BuildContext context) =>
             widget.captureGroupPageBuilder?.call(context, baseUrl) ??
-            SelectCaptureGroupPage(
-              baseUrl: baseUrl,
-            ),
+            SelectCaptureGroupPage(baseUrl: baseUrl),
       ),
     );
   }
@@ -317,15 +312,12 @@ class _MyHomePageState extends State<MyHomePage> {
   ) async {
     final String? baseUrl = _sectionBaseUrl(section);
     if (baseUrl == null || baseUrl.isEmpty) {
-      ScreenFeedback.showMessage(
-        context,
-        'This group cannot be notified until its images finish loading.',
-      );
+      ScreenFeedback.showMessage(context, _l10n.notifyWhenImagesLoading);
       return;
     }
 
-    final GroupNotificationResult? result =
-        await Navigator.of(context).push<GroupNotificationResult>(
+    final GroupNotificationResult? result = await Navigator.of(context)
+        .push<GroupNotificationResult>(
           MaterialPageRoute<GroupNotificationResult>(
             builder: (BuildContext context) => GroupPushNotificationPage(
               groupId: section.groupId,
@@ -339,8 +331,11 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     final String message = result.skippedCount > 0
-        ? 'Notification sent to ${result.notifiedCount} devices. ${result.skippedCount} were skipped.'
-        : 'Notification sent to ${result.notifiedCount} devices.';
+        ? _l10n.notificationSentWithSkipped(
+            result.notifiedCount,
+            result.skippedCount,
+          )
+        : _l10n.notificationSent(result.notifiedCount);
     ScreenFeedback.showMessage(context, message);
   }
 
@@ -352,9 +347,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
 
       setState(() {
-        _imageSections = _removeImageFromSections(_imageSections, item.imageUuid);
+        _imageSections = _removeImageFromSections(
+          _imageSections,
+          item.imageUuid,
+        );
       });
-      ScreenFeedback.showMessage(context, 'Image deleted.');
+      ScreenFeedback.showMessage(context, _l10n.imageDeleted);
       return true;
     } on ApiException catch (error) {
       if (mounted) {
@@ -381,7 +379,10 @@ class _MyHomePageState extends State<MyHomePage> {
           <DeviceEncryptedImageFeedDay>[];
       for (final DeviceEncryptedImageFeedDay day in section.days) {
         final List<DeviceEncryptedImageFeedItem> updatedItems = day.items
-            .where((DeviceEncryptedImageFeedItem item) => item.imageUuid != imageUuid)
+            .where(
+              (DeviceEncryptedImageFeedItem item) =>
+                  item.imageUuid != imageUuid,
+            )
             .toList();
         if (updatedItems.isEmpty) {
           continue;
@@ -417,9 +418,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Text(
-                    'Menu',
-                    style: TextStyle(color: Colors.white, fontSize: 24),
+                  Text(
+                    _l10n.homeMenu,
+                    style: const TextStyle(color: Colors.white, fontSize: 24),
                   ),
                   if (_lastLoggedInUsername != null &&
                       _lastLoggedInUsername!.isNotEmpty) ...[
@@ -437,14 +438,14 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Photos'),
+              title: Text(_l10n.homeTabPhotos),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: const Icon(Icons.group),
-              title: const Text('Groups'),
+              title: Text(_l10n.homeTabGroups),
               onTap: () async {
                 Navigator.pop(context);
                 await _openGroups();
@@ -455,7 +456,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 _lastLoggedInUsername!.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.account_circle),
-                title: const Text('Account'),
+                title: Text(_l10n.homeTabAccount),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -472,7 +473,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     _lastLoggedInUsername!.isEmpty))
               ListTile(
                 leading: const Icon(Icons.login),
-                title: const Text('Log In'),
+                title: Text(_l10n.homeTabLogIn),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -485,7 +486,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ListTile(
               leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
+              title: Text(_l10n.homeTabSettings),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -501,7 +502,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             ListTile(
               leading: const Icon(Icons.info_outline),
-              title: const Text('About'),
+              title: Text(_l10n.homeTabAbout),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -518,7 +519,7 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: _canTakePictures
           ? FloatingActionButton(
               onPressed: _openCaptureGroupSelection,
-              tooltip: 'Take Picture',
+              tooltip: _l10n.homeTakePicture,
               child: const Icon(Icons.camera_alt),
             )
           : null,
@@ -539,9 +540,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (_imageSections.isNotEmpty) {
       return ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
-          for (final DeviceEncryptedImageFeedSection section in _imageSections) ...[
+          for (final DeviceEncryptedImageFeedSection section
+              in _imageSections) ...[
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -555,7 +557,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   IconButton(
                     onPressed: () => _openGroupNotificationPage(section),
                     icon: const Icon(Icons.notifications_outlined),
-                    tooltip: 'Send Message to Group',
+                    tooltip: _l10n.homeSendMessageToGroup,
                   ),
               ],
             ),
@@ -623,7 +625,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 FilledButton.icon(
                   onPressed: _loadSettings,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(_l10n.homeRetry),
                 ),
               ],
             ),
@@ -637,7 +639,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
-              'Currently there are no images for you',
+              _l10n.homeNoImages,
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -655,14 +657,14 @@ class _MyHomePageState extends State<MyHomePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _noGroupsYetMessage,
+                _l10n.homeNoGroupsYet,
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => _openGroups(),
-                child: const Text('Join Group'),
+                child: Text(_l10n.homeJoinGroup),
               ),
             ],
           ),
@@ -678,8 +680,7 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              _startupErrorMessage ??
-                  'Could not reach the API. Please check your connection and try again.',
+              _startupErrorMessage ?? _l10n.homeApiUnreachable,
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -687,7 +688,7 @@ class _MyHomePageState extends State<MyHomePage> {
             FilledButton.icon(
               onPressed: _loadSettings,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(_l10n.homeRetry),
             ),
           ],
         ),
@@ -727,7 +728,7 @@ class _MyHomePageState extends State<MyHomePage> {
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          'Loading images...',
+          _l10n.homeLoadingImages,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 12),
@@ -751,24 +752,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String _formatDay(DateTime? day) {
     if (day == null) {
-      return 'Unknown day';
+      return _l10n.homeUnknownDay;
     }
     final DateTime localDay = day.toLocal();
-    const List<String> monthNames = <String>[
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${monthNames[localDay.month - 1]} ${localDay.day}, ${localDay.year}';
+    return DateFormat.yMMMMd(Localizations.localeOf(context).toLanguageTag())
+        .format(localDay);
   }
 }
 
@@ -783,7 +771,16 @@ class _EncryptedImageCard extends StatelessWidget {
   final DeviceEncryptedImageFeedItem item;
   final List<DeviceEncryptedImageFeedItem> dayItems;
   final int initialIndex;
-  final Future<bool> Function(DeviceEncryptedImageFeedItem item)? onDeleteRequested;
+  final Future<bool> Function(DeviceEncryptedImageFeedItem item)?
+  onDeleteRequested;
+
+  String? _normalizedCaption(String? rawCaption) {
+    final String? trimmed = rawCaption?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
 
   void _openFullscreenImage(BuildContext context) {
     if (item.isCorrupt || item.imageBytes == null) {
@@ -808,6 +805,8 @@ class _EncryptedImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context)!;
+    final String? caption = _normalizedCaption(item.caption);
     final Widget imageWidget = item.isLoading
         ? const _SkeletonShimmer()
         : item.isCorrupt || item.imageBytes == null
@@ -815,102 +814,71 @@ class _EncryptedImageCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
             ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.broken_image_outlined,
-                      size: 40,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Failed to decrypt image',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: const _DecryptionFailurePlaceholder(),
           )
         : Image.memory(
             item.imageBytes!,
             fit: BoxFit.cover,
             gaplessPlayback: true,
-            errorBuilder: (
-              BuildContext context,
-              Object error,
-              StackTrace? stackTrace,
-            ) {
-              return DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                ),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.broken_image_outlined,
-                          size: 40,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Failed to decrypt image',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+            errorBuilder:
+                (BuildContext context, Object error, StackTrace? stackTrace) {
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                     ),
-                  ),
-                ),
-              );
-            },
+                    child: const _DecryptionFailurePlaceholder(),
+                  );
+                },
           );
 
     return GestureDetector(
       onTap: item.isLoading || item.isCorrupt || item.imageBytes == null
           ? null
           : () => _openFullscreenImage(context),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            imageWidget,
-            if (item.caption != null && item.caption!.isNotEmpty)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [Colors.black87, Colors.transparent],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  imageWidget,
+                  if (caption != null)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: _CaptionGradientOverlay(
+                        caption: caption,
+                        maxLines: 2,
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-                    child: Text(
-                      item.caption!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
+                ],
+              ),
+            ),
+          ),
+          if (item.expiresAt != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                formatPhotoExpirationText(
+                  item.expiresAt!,
+                  expiresInDaysTextBuilder: l10n.expirationInDays,
+                  expiredText: l10n.expirationExpired,
+                ),
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                  fontSize: 11,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -944,8 +912,12 @@ class _SkeletonShimmerState extends State<_SkeletonShimmer>
 
   @override
   Widget build(BuildContext context) {
-    final Color baseColor = Theme.of(context).colorScheme.surfaceContainerHighest;
-    final Color highlightColor = Theme.of(context).colorScheme.surfaceContainerHigh;
+    final Color baseColor = Theme.of(
+      context,
+    ).colorScheme.surfaceContainerHighest;
+    final Color highlightColor = Theme.of(
+      context,
+    ).colorScheme.surfaceContainerHigh;
 
     return AnimatedBuilder(
       animation: _controller,
@@ -970,9 +942,7 @@ class _SkeletonShimmerState extends State<_SkeletonShimmer>
         );
       },
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: baseColor.withValues(alpha: 0.28),
-        ),
+        decoration: BoxDecoration(color: baseColor.withValues(alpha: 0.28)),
       ),
     );
   }
@@ -990,6 +960,81 @@ class _ImageLoadingCard extends StatelessWidget {
   }
 }
 
+class _DecryptionFailurePlaceholder extends StatelessWidget {
+  const _DecryptionFailurePlaceholder({
+    this.iconSize = 40,
+    this.iconColor,
+    this.textStyle,
+    this.padding = const EdgeInsets.all(12),
+  });
+
+  final double iconSize;
+  final Color? iconColor;
+  final TextStyle? textStyle;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color resolvedIconColor =
+        iconColor ?? Theme.of(context).colorScheme.onSurfaceVariant;
+    final TextStyle? resolvedTextStyle =
+        textStyle ?? Theme.of(context).textTheme.bodyMedium;
+
+    return Center(
+      child: Padding(
+        padding: padding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.broken_image_outlined,
+              size: iconSize,
+              color: resolvedIconColor,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              AppLocalizations.of(context)!.failedToDecryptImage,
+              style: resolvedTextStyle,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CaptionGradientOverlay extends StatelessWidget {
+  const _CaptionGradientOverlay({required this.caption, this.maxLines});
+
+  final String caption;
+  final int? maxLines;
+
+  static const BoxDecoration _gradientDecoration = BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+      colors: <Color>[Colors.black87, Colors.transparent],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: _gradientDecoration,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+        child: Text(
+          caption,
+          maxLines: maxLines,
+          overflow: maxLines == null ? null : TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white, fontSize: 12),
+        ),
+      ),
+    );
+  }
+}
+
 class _FullscreenImageViewer extends StatefulWidget {
   const _FullscreenImageViewer({
     required this.items,
@@ -999,7 +1044,8 @@ class _FullscreenImageViewer extends StatefulWidget {
 
   final List<DeviceEncryptedImageFeedItem> items;
   final int initialIndex;
-  final Future<bool> Function(DeviceEncryptedImageFeedItem item)? onDeleteRequested;
+  final Future<bool> Function(DeviceEncryptedImageFeedItem item)?
+  onDeleteRequested;
 
   @override
   State<_FullscreenImageViewer> createState() => _FullscreenImageViewerState();
@@ -1012,10 +1058,28 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
   bool _isDeleting = false;
 
   DeviceEncryptedImageFeedItem get _currentItem => widget.items[_currentIndex];
+  Widget _buildToolbarFilledButton({
+    required VoidCallback? onPressed,
+    required Widget icon,
+    String? tooltip,
+  }) {
+    return IconButton.filled(
+      onPressed: onPressed,
+      icon: icon,
+      tooltip: tooltip,
+    );
+  }
+
+  String? get _currentCaption {
+    final String? trimmed = _currentItem.caption?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
 
   void _toggleCaptionOverlay() {
-    final String caption = _currentItem.caption?.trim() ?? '';
-    if (caption.isEmpty) {
+    if (_currentCaption == null) {
       return;
     }
 
@@ -1026,26 +1090,27 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
 
   Future<void> _confirmDeleteCurrentImage() async {
     final DeviceEncryptedImageFeedItem currentItem = _currentItem;
-    if (_isDeleting || !currentItem.canDelete || widget.onDeleteRequested == null) {
+    if (_isDeleting ||
+        !currentItem.canDelete ||
+        widget.onDeleteRequested == null) {
       return;
     }
 
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
+        final AppLocalizations l10n = AppLocalizations.of(context)!;
         return AlertDialog(
-          title: const Text('Delete Image'),
-          content: const Text(
-            'Delete this image from the server for this group? This action cannot be undone.',
-          ),
+          title: Text(l10n.homeDeleteImageTitle),
+          content: Text(l10n.homeDeleteImageConfirm),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
+              child: Text(l10n.delete),
             ),
           ],
         );
@@ -1079,7 +1144,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    _showCaptionOverlay = _currentItem.caption?.trim().isNotEmpty ?? false;
+    _showCaptionOverlay = _currentCaption != null;
   }
 
   @override
@@ -1099,8 +1164,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
             onPageChanged: (int index) {
               setState(() {
                 _currentIndex = index;
-                _showCaptionOverlay =
-                    widget.items[index].caption?.trim().isNotEmpty ?? false;
+                _showCaptionOverlay = _currentCaption != null;
               });
             },
             itemBuilder: (BuildContext context, int index) {
@@ -1113,27 +1177,15 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
                   maxScale: 4,
                   child: Center(
                     child: item.isCorrupt || item.imageBytes == null
-                        ? Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.broken_image_outlined,
-                                  size: 72,
-                                  color: Colors.white70,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Failed to decrypt image',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(color: Colors.white),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                        ? _DecryptionFailurePlaceholder(
+                            iconSize: 72,
+                            iconColor: Colors.white70,
+                            textStyle: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
                             ),
+                            padding: const EdgeInsets.all(24),
                           )
                         : Image.memory(
                             item.imageBytes!,
@@ -1146,7 +1198,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
             },
           ),
         ),
-        if (_currentItem.caption?.trim().isNotEmpty ?? false) ...[
+        if (_currentCaption != null) ...[
           if (_showCaptionOverlay)
             Positioned(
               left: 0,
@@ -1155,9 +1207,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
               child: SafeArea(
                 top: false,
                 child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                  ),
+                  decoration: const BoxDecoration(color: Colors.black54),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 12, 16),
                     child: Column(
@@ -1172,17 +1222,16 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
                               Icons.keyboard_arrow_down,
                               color: Colors.white,
                             ),
-                            tooltip: 'Collapse caption',
+                            tooltip: AppLocalizations.of(context)!
+                                .homeCollapseCaption,
                           ),
                         ),
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxHeight: 180),
                           child: SingleChildScrollView(
                             child: Text(
-                              _currentItem.caption!.trim(),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
+                              _currentCaption!,
+                              style: Theme.of(context).textTheme.bodyLarge
                                   ?.copyWith(color: Colors.white),
                             ),
                           ),
@@ -1210,7 +1259,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
                       Icons.keyboard_arrow_up,
                       color: Colors.white,
                     ),
-                    tooltip: 'Show caption',
+                    tooltip: AppLocalizations.of(context)!.homeShowCaption,
                   ),
                 ),
               ),
@@ -1224,17 +1273,18 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
                 Expanded(
                   child: Text(
                     '${_currentIndex + 1} / ${widget.items.length}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: Colors.white),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: Colors.white),
                   ),
                 ),
                 if (_currentItem.canDelete && widget.onDeleteRequested != null)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: IconButton.filled(
-                      onPressed: _isDeleting ? null : _confirmDeleteCurrentImage,
+                    child: _buildToolbarFilledButton(
+                      onPressed: _isDeleting
+                          ? null
+                          : _confirmDeleteCurrentImage,
                       icon: _isDeleting
                           ? const SizedBox(
                               width: 18,
@@ -1242,10 +1292,11 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.delete_outline),
-                      tooltip: 'Delete image',
+                      tooltip: AppLocalizations.of(context)!
+                          .homeDeleteImageTooltip,
                     ),
                   ),
-                IconButton.filled(
+                _buildToolbarFilledButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close),
                 ),

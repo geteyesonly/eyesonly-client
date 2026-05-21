@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/device/api_service.dart';
 import 'package:eyesonly/screens/join_group_qr_page.dart';
@@ -34,6 +35,8 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _isSubmitting = false;
 
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
+
   @override
   void initState() {
     super.initState();
@@ -57,18 +60,21 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Register This Device'),
-          content: const Text(
-            'This device is not registered yet. On your already-registered manager device, tap "Register Manager Device" and scan the QR code shown here.',
+          title: Text(
+            _l10n?.loginRegisterThisDeviceTitle ?? 'Register This Device',
+          ),
+          content: Text(
+            _l10n?.loginRegisterThisDeviceContent ??
+                'This device is not registered yet. On your already-registered manager device, tap "Register Manager Device" and scan the QR code shown here.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Later'),
+              child: Text(_l10n?.loginLater ?? 'Later'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Show QR Code'),
+              child: Text(_l10n?.loginShowQrCode ?? 'Show QR Code'),
             ),
           ],
         );
@@ -103,7 +109,10 @@ class _LoginPageState extends State<LoginPage> {
       final String? baseUrl = settings.managerServerURL?.trim();
       final String username = _usernameController.text.trim();
       if (baseUrl == null || baseUrl.isEmpty) {
-        throw ApiException('Server URL is not set. Configure it in Settings.');
+        throw ApiException(
+          _l10n?.loginServerUrlNotSet ??
+              'Server URL is not set. Configure it in Settings.',
+        );
       }
 
       final ManagerApiService managerApiService =
@@ -178,7 +187,10 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
 
-      ScreenFeedback.showMessage(context, 'Login successful');
+      ScreenFeedback.showMessage(
+        context,
+        _l10n?.loginSuccessful ?? 'Login successful',
+      );
       Navigator.pop(context, true);
     } on ApiException catch (error) {
       if (!mounted) {
@@ -192,7 +204,8 @@ class _LoginPageState extends State<LoginPage> {
       ScreenFeedback.showError(
         context,
         error,
-        fallbackMessage: 'Login failed. Please try again.',
+        fallbackMessage:
+            _l10n?.loginFailedTryAgain ?? 'Login failed. Please try again.',
       );
     } finally {
       if (mounted) {
@@ -205,9 +218,11 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log In'),
+        title: Text(l10n?.homeTabLogIn ?? 'Log In'),
       ),
       body: SafeArea(
         child: Center(
@@ -221,24 +236,26 @@ class _LoginPageState extends State<LoginPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Manager Login',
+                      l10n?.loginManagerTitle ?? 'Manager Login',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'This app supports login only. Registration is disabled.',
+                      l10n?.loginOnlyMessage ??
+                          'This app supports login only. Registration is disabled.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _usernameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Username',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n?.loginUsernameLabel ?? 'Username',
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Username is required';
+                          return l10n?.loginUsernameRequired ??
+                              'Username is required';
                         }
                         return null;
                       },
@@ -248,7 +265,7 @@ class _LoginPageState extends State<LoginPage> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        labelText: 'Password',
+                        labelText: l10n?.loginPasswordLabel ?? 'Password',
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           onPressed: () {
@@ -265,7 +282,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Password is required';
+                          return l10n?.loginPasswordRequired ??
+                              'Password is required';
                         }
                         return null;
                       },
@@ -273,7 +291,11 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _isSubmitting ? null : _submitLogin,
-                      child: Text(_isSubmitting ? 'Logging In...' : 'Log In'),
+                      child: Text(
+                        _isSubmitting
+                            ? (l10n?.loginLoggingIn ?? 'Logging In...')
+                            : (l10n?.homeTabLogIn ?? 'Log In'),
+                      ),
                     ),
                   ],
                 ),

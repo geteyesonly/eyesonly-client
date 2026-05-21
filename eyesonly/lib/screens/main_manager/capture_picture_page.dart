@@ -4,8 +4,11 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 import 'package:eyesonly/screens/main_manager/send_captured_picture_page.dart';
+import 'package:eyesonly/services/jpeg_privacy.dart';
+import 'package:eyesonly/services/photo_expiration.dart';
 import 'package:eyesonly/services/screen_feedback.dart';
 
 class CapturePicturePage extends StatefulWidget {
@@ -33,11 +36,18 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
   CameraLensDirection _activeLensDirection = CameraLensDirection.back;
   FlashMode _flashMode = FlashMode.off;
   Offset? _focusIndicatorPosition;
+  PhotoExpirationSelection _sessionExpirationSelection =
+      const PhotoExpirationSelection.defaultSelection();
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _initializeCamera();
+    });
   }
 
   Future<void> _initializeCamera() async {
@@ -47,9 +57,12 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     });
 
     try {
+      final AppLocalizations? l10n = AppLocalizations.of(context);
+      final String noCameraMessage =
+          l10n?.captureNoCameraAvailable ?? 'No camera available.';
       final List<CameraDescription> cameras = await availableCameras();
       if (cameras.isEmpty) {
-        throw StateError('No camera is available on this device.');
+        throw StateError(noCameraMessage);
       }
 
       _availableCameras = cameras;
@@ -132,8 +145,9 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       return;
     }
 
-    final FlashMode nextFlashMode =
-        _flashMode == FlashMode.off ? FlashMode.auto : FlashMode.off;
+    final FlashMode nextFlashMode = _flashMode == FlashMode.off
+        ? FlashMode.auto
+        : FlashMode.off;
 
     try {
       await controller.setFlashMode(nextFlashMode);
@@ -180,8 +194,12 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       }
 
       final XFile capturedFile = await controller.takePicture();
-      final Uint8List imageBytes = _stripJpegMetadata(
-        await capturedFile.readAsBytes(),
+      final Uint8List rawBytes = await capturedFile.readAsBytes();
+      final Uint8List normalizedBytes = JpegPrivacy.normalizeJpegOrientation(
+        rawBytes,
+      );
+      final Uint8List imageBytes = JpegPrivacy.stripJpegMetadata(
+        normalizedBytes,
       );
 
       if (!kIsWeb) {
@@ -199,20 +217,29 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
         return;
       }
 
-      final bool? shouldDelete = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute<bool>(
-          builder: (BuildContext context) => SendCapturedPicturePage(
-            baseUrl: widget.baseUrl,
-            groupId: widget.groupId,
-            groupName: widget.groupName,
-            imageBytes: imageBytes,
-          ),
-        ),
-      );
+      final SendCapturedPictureResult? result =
+          await Navigator.push<SendCapturedPictureResult>(
+            context,
+            MaterialPageRoute<SendCapturedPictureResult>(
+              builder: (BuildContext context) => SendCapturedPicturePage(
+                baseUrl: widget.baseUrl,
+                groupId: widget.groupId,
+                groupName: widget.groupName,
+                imageBytes: imageBytes,
+                initialExpirationSelection: _sessionExpirationSelection,
+              ),
+            ),
+          );
 
-      if (shouldDelete == true && mounted) {
-        ScreenFeedback.showMessage(context, 'Picture deleted.');
+      if (result != null) {
+        _sessionExpirationSelection = result.expirationSelection;
+      }
+
+      if (result?.shouldDelete == true && mounted) {
+        ScreenFeedback.showMessage(
+          context,
+          AppLocalizations.of(context)!.pictureDeleted,
+        );
       }
     } catch (error) {
       if (!mounted) {
@@ -248,14 +275,16 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
   }
 
   String _flashLabel() {
+    final AppLocalizations l10n = AppLocalizations.of(context)!;
+
     switch (_flashMode) {
       case FlashMode.auto:
-        return 'Flash Auto';
+        return l10n.flashAuto;
       case FlashMode.always:
       case FlashMode.torch:
-        return 'Flash On';
+        return l10n.flashOn;
       case FlashMode.off:
-        return 'Flash Off';
+        return l10n.flashOff;
     }
   }
 
@@ -271,8 +300,8 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     final double displayAspectRatio = sensorSize == null
         ? 1.0
         : isLandscape
-            ? sensorSize.width / sensorSize.height
-            : sensorSize.height / sensorSize.width;
+        ? sensorSize.width / sensorSize.height
+        : sensorSize.height / sensorSize.width;
 
     return GestureDetector(
       onTapUp: (TapUpDetails details) => _onPreviewTap(details, controller),
@@ -334,83 +363,6 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     if (mounted) setState(() => _focusIndicatorPosition = null);
   }
 
-  /// Strips all JPEG APP segments (EXIF, XMP, IPTC, ICC profile, GPS, etc.)
-  /// from [src] without re-encoding, so image quality is fully preserved.
-  static Uint8List _stripJpegMetadata(Uint8List src) {
-    // A valid JPEG starts with SOI: FF D8.
-    if (src.length < 2 || src[0] != 0xFF || src[1] != 0xD8) {
-      return src;
-    }
-
-    final Uint8List dst = Uint8List(src.length);
-    int dstPos = 0;
-
-    void writeByte(int b) => dst[dstPos++] = b;
-
-    void writeRange(int start, int end) {
-      dst.setRange(dstPos, dstPos + (end - start), src, start);
-      dstPos += end - start;
-    }
-
-    // Copy SOI.
-    writeByte(0xFF);
-    writeByte(0xD8);
-
-    int pos = 2;
-    while (pos < src.length) {
-      if (src[pos] != 0xFF) break; // malformed stream
-
-      // Advance past any 0xFF fill bytes.
-      while (pos < src.length && src[pos] == 0xFF) {
-        pos++;
-      }
-      if (pos >= src.length) break;
-
-      final int marker = src[pos++];
-
-      // EOI: done.
-      if (marker == 0xD9) {
-        writeByte(0xFF);
-        writeByte(0xD9);
-        break;
-      }
-
-      // SOS: write it and all remaining bytes (entropy-coded data + EOI) as-is.
-      if (marker == 0xDA) {
-        writeByte(0xFF);
-        writeByte(0xDA);
-        writeRange(pos, src.length);
-        break;
-      }
-
-      // Standalone markers (RST0-7, TEM): no length field.
-      if (marker == 0x01 || (marker >= 0xD0 && marker <= 0xD7)) {
-        writeByte(0xFF);
-        writeByte(marker);
-        continue;
-      }
-
-      // All other markers carry a 2-byte length field (length includes itself).
-      if (pos + 1 >= src.length) break;
-      final int segLen = (src[pos] << 8) | src[pos + 1];
-      if (segLen < 2 || pos + segLen > src.length) break; // malformed
-
-      // APP0–APP15 (0xE0–0xEF): these carry all metadata — drop them.
-      if (marker >= 0xE0 && marker <= 0xEF) {
-        pos += segLen;
-        continue;
-      }
-
-      // Everything else (DQT, SOF, DHT, COM, …): keep.
-      writeByte(0xFF);
-      writeByte(marker);
-      writeRange(pos, pos + segLen);
-      pos += segLen;
-    }
-
-    return dst.sublist(0, dstPos);
-  }
-
   @override
   void dispose() {
     _cameraController?.dispose();
@@ -419,6 +371,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context)!;
     final CameraController? controller = _cameraController;
 
     return Scaffold(
@@ -444,7 +397,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
                     FilledButton.icon(
                       onPressed: _initializeCamera,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Retry Camera'),
+                      label: Text(l10n.retryCamera),
                     ),
                   ],
                 ),
@@ -521,9 +474,14 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
                       radius: 28,
                       backgroundColor: Colors.black54,
                       child: IconButton(
-                        onPressed: _availableCameras.length < 2 ? null : _switchCamera,
-                        icon: const Icon(Icons.cameraswitch, color: Colors.white),
-                        tooltip: 'Switch Camera',
+                        onPressed: _availableCameras.length < 2
+                            ? null
+                            : _switchCamera,
+                        icon: const Icon(
+                          Icons.cameraswitch,
+                          color: Colors.white,
+                        ),
+                        tooltip: l10n.switchCamera,
                       ),
                     ),
                   ],

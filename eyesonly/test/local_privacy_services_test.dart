@@ -11,19 +11,19 @@ import 'package:eyesonly/services/manager/auth_token_store.dart';
 import 'package:eyesonly/services/manager/device_registration_keys.dart';
 import 'package:eyesonly/services/manager/group_content_key_store.dart';
 import 'package:eyesonly/services/reset_service.dart';
-import 'package:eyesonly/services/secure_decrypted_image_cache.dart';
+import 'package:eyesonly/services/secure_encrypted_image_blob_cache.dart';
 import 'package:eyesonly/services/settings_store.dart';
 
 void main() {
-  group('SecureDecryptedImageCache', () {
+  group('SecureEncryptedImageBlobCache', () {
     late Directory tempRoot;
     late FakeFlutterSecureStorage secureStorage;
-    late SecureDecryptedImageCache cache;
+    late SecureEncryptedImageBlobCache cache;
 
     setUp(() async {
       tempRoot = await Directory.systemTemp.createTemp('eyesonly-cache-test-');
       secureStorage = FakeFlutterSecureStorage();
-      cache = SecureDecryptedImageCache(
+      cache = SecureEncryptedImageBlobCache(
         secureStorage: secureStorage,
         directoryProvider: () async => tempRoot,
       );
@@ -35,25 +35,26 @@ void main() {
       }
     });
 
-    test('writes and reads decrypted image data roundtrip', () async {
+    test('writes and reads encrypted image blob data roundtrip', () async {
       await cache.write(
         imageUuid: 'image-1',
-        imageBytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
-        caption: 'hello',
+        encryptedBlobBytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
       );
 
-      final SecureDecryptedImageCacheEntry? entry = await cache.read('image-1');
+      final SecureEncryptedImageBlobCacheEntry? entry = await cache.read('image-1');
 
       expect(entry, isNotNull);
-      expect(entry!.imageBytes, Uint8List.fromList(<int>[1, 2, 3, 4]));
-      expect(entry.caption, 'hello');
+      expect(
+        entry!.encryptedBlobBytes,
+        Uint8List.fromList(<int>[1, 2, 3, 4]),
+      );
       expect(secureStorage.writtenKeys, contains('secure_decrypted_image_cache_key_v2'));
     });
 
     test('returns null and deletes expired cache entries', () async {
       await cache.write(
         imageUuid: 'image-expired',
-        imageBytes: Uint8List.fromList(<int>[9, 8, 7]),
+        encryptedBlobBytes: Uint8List.fromList(<int>[9, 8, 7]),
       );
       final File cacheFile = await _singleCacheFile(tempRoot);
       final Map<String, dynamic> payload = jsonDecode(await cacheFile.readAsString())
@@ -64,7 +65,7 @@ void main() {
           .millisecondsSinceEpoch;
       await cacheFile.writeAsString(jsonEncode(payload));
 
-      final SecureDecryptedImageCacheEntry? entry = await cache.read('image-expired');
+      final SecureEncryptedImageBlobCacheEntry? entry = await cache.read('image-expired');
 
       expect(entry, isNull);
       expect(await cacheFile.exists(), isFalse);
@@ -73,12 +74,12 @@ void main() {
     test('returns null and deletes corrupt cache entries', () async {
       await cache.write(
         imageUuid: 'image-corrupt',
-        imageBytes: Uint8List.fromList(<int>[1]),
+        encryptedBlobBytes: Uint8List.fromList(<int>[1]),
       );
       final File cacheFile = await _singleCacheFile(tempRoot);
       await cacheFile.writeAsString('{not json');
 
-      final SecureDecryptedImageCacheEntry? entry = await cache.read('image-corrupt');
+      final SecureEncryptedImageBlobCacheEntry? entry = await cache.read('image-corrupt');
 
       expect(entry, isNull);
       expect(await cacheFile.exists(), isFalse);
@@ -87,11 +88,11 @@ void main() {
     test('prunes inactive cache entries', () async {
       await cache.write(
         imageUuid: 'keep-image',
-        imageBytes: Uint8List.fromList(<int>[1, 2]),
+        encryptedBlobBytes: Uint8List.fromList(<int>[1, 2]),
       );
       await cache.write(
         imageUuid: 'drop-image',
-        imageBytes: Uint8List.fromList(<int>[3, 4]),
+        encryptedBlobBytes: Uint8List.fromList(<int>[3, 4]),
       );
 
       await cache.pruneToActiveImageUuids(<String>{'keep-image'});
@@ -105,7 +106,7 @@ void main() {
     test('clears all targeted local state stores', () async {
       final FakeDeviceAuthTokenStore deviceAuthTokenStore = FakeDeviceAuthTokenStore();
       final FakeAuthTokenStore managerAuthTokenStore = FakeAuthTokenStore();
-      final FakeSecureDecryptedImageCache imageCache = FakeSecureDecryptedImageCache();
+      final FakeSecureEncryptedImageBlobCache imageCache = FakeSecureEncryptedImageBlobCache();
       final FakeGroupContentKeyStore groupContentKeyStore = FakeGroupContentKeyStore();
       final FakeInstallationIdStore installationIdStore = FakeInstallationIdStore();
       final FakeFlutterSecureStorage secureStorage = FakeFlutterSecureStorage();
@@ -230,7 +231,7 @@ class FakeAuthTokenStore extends AuthTokenStore {
   }
 }
 
-class FakeSecureDecryptedImageCache extends SecureDecryptedImageCache {
+class FakeSecureEncryptedImageBlobCache extends SecureEncryptedImageBlobCache {
   bool clearCalled = false;
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 import 'package:eyesonly/screens/scan_qr_code_page.dart';
 import 'package:eyesonly/services/api_exception.dart';
@@ -31,15 +32,17 @@ class _RegisterManagerDevicePageState
   bool _isSubmitting = false;
   _ScannedManagerDevice? _scannedDevice;
 
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
+
   bool get _hasDeviceData => _scannedDevice != null;
 
   Future<void> _openScanDevicePage() async {
     final String? rawValue = await Navigator.push<String>(
       context,
       MaterialPageRoute<String>(
-        builder: (BuildContext context) => const ScanQrCodePage(
-          title: 'Scan Manager Device',
-          instruction:
+        builder: (BuildContext context) => ScanQrCodePage(
+          title: _l10n?.groupAddManagerScanTitle ?? 'Scan Manager Device',
+          instruction: _l10n?.registerManagerDeviceScanInstruction ??
               'On the second device, go to Groups → Join Group and scan that QR code here.',
         ),
       ),
@@ -52,6 +55,7 @@ class _RegisterManagerDevicePageState
     try {
       final _ScannedManagerDevice device = _ScannedManagerDevice.fromQrPayload(
         rawValue: rawValue,
+        l10n: _l10n,
       );
       final String scannedBaseUrl = device.apiUrl.trim();
       final String currentBaseUrl = widget.baseUrl.trim();
@@ -59,32 +63,49 @@ class _RegisterManagerDevicePageState
         final bool? proceed = await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
-            title: const Text('Server URL mismatch'),
+            title: Text(
+              _l10n?.registerManagerDeviceServerUrlMismatchTitle ??
+                  'Server URL mismatch',
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'The scanned device is registered to a different server address. This may be normal if both addresses point to the same server (e.g. emulator vs. physical device on the same network).',
+                Text(
+                  _l10n?.registerManagerDeviceServerUrlMismatchBody ??
+                      'The scanned device is registered to a different server address. This may be normal if both addresses point to the same server (e.g. emulator vs. physical device on the same network).',
                 ),
                 const SizedBox(height: 16),
-                Text('Current server:', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  _l10n?.registerManagerDeviceCurrentServerLabel ??
+                      'Current server:',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 Text(currentBaseUrl, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 8),
-                Text('Device server:', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  _l10n?.registerManagerDeviceDeviceServerLabel ??
+                      'Device server:',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 Text(scannedBaseUrl, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 16),
-                const Text('Only continue if you are sure both addresses point to the same server.'),
+                Text(
+                  _l10n?.registerManagerDeviceServerUrlMismatchWarning ??
+                      'Only continue if you are sure both addresses point to the same server.',
+                ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text(_l10n?.registerManagerDeviceCancel ?? 'Cancel'),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Continue'),
+                child: Text(
+                  _l10n?.registerManagerDeviceContinue ?? 'Continue',
+                ),
               ),
             ],
           ),
@@ -145,7 +166,10 @@ class _RegisterManagerDevicePageState
         return;
       }
 
-      ScreenFeedback.showMessage(context, 'Device registered successfully.');
+      ScreenFeedback.showMessage(
+        context,
+        _l10n?.registerManagerDeviceSuccess ?? 'Device registered successfully.',
+      );
       Navigator.of(context).pop(true);
     } on ApiException catch (error) {
       if (!mounted) {
@@ -169,9 +193,14 @@ class _RegisterManagerDevicePageState
   @override
   Widget build(BuildContext context) {
     final _ScannedManagerDevice? scannedDevice = _scannedDevice;
+    final AppLocalizations? l10n = _l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Register Manager Device')),
+      appBar: AppBar(
+        title: Text(
+          l10n?.registerManagerDeviceTitle ?? 'Register Manager Device',
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
@@ -182,7 +211,8 @@ class _RegisterManagerDevicePageState
             ),
             const SizedBox(height: 8),
             Text(
-              'Scan the QR code shown on the second manager device (Groups → Join Group) to register it as an additional device for your account.',
+              l10n?.registerManagerDeviceInstruction ??
+                  'Scan the QR code shown on the second manager device (Groups → Join Group) to register it as an additional device for your account.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
@@ -199,7 +229,11 @@ class _RegisterManagerDevicePageState
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    scannedDevice != null ? 'Device scanned' : 'Scan required',
+                    scannedDevice != null
+                        ? (l10n?.registerManagerDeviceScanned ??
+                            'Device scanned')
+                        : (l10n?.registerManagerDeviceScanRequired ??
+                            'Scan required'),
                     style: TextStyle(
                       color: scannedDevice != null
                           ? Theme.of(context).colorScheme.primary
@@ -214,14 +248,20 @@ class _RegisterManagerDevicePageState
               child: FilledButton.icon(
                 onPressed: _isSubmitting ? null : _openScanDevicePage,
                 icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Scan Device QR'),
+                label: Text(
+                  l10n?.registerManagerDeviceScanDeviceQr ?? 'Scan Device QR',
+                ),
               ),
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isSubmitting || !_hasDeviceData ? null : _submit,
               child: Text(
-                _isSubmitting ? 'Registering...' : 'Register Device',
+                _isSubmitting
+                    ? (l10n?.registerManagerDeviceRegistering ??
+                        'Registering...')
+                    : (l10n?.registerManagerDeviceRegisterAction ??
+                        'Register Device'),
               ),
             ),
           ],
@@ -244,15 +284,24 @@ class _ScannedManagerDevice {
   final String publicKey;
   final String publicKeyAlgorithm;
 
-  factory _ScannedManagerDevice.fromQrPayload({required String rawValue}) {
+  factory _ScannedManagerDevice.fromQrPayload({
+    required String rawValue,
+    AppLocalizations? l10n,
+  }) {
     final dynamic decoded = jsonDecode(rawValue);
     if (decoded is! Map<String, dynamic>) {
-      throw ApiException('The scanned QR code did not contain valid JSON data.');
+      throw ApiException(
+        l10n?.scanQrInvalidJson ??
+            'The scanned QR code did not contain valid JSON data.',
+      );
     }
 
     final String type = (decoded['type'] as String?)?.trim() ?? '';
     if (type != 'eyesonly-device-join') {
-      throw ApiException('The scanned QR code is not a device join code.');
+      throw ApiException(
+        l10n?.registerManagerDeviceNotJoinCode ??
+            'The scanned QR code is not a device join code.',
+      );
     }
 
     final String apiUrl = (decoded['api_url'] as String?)?.trim() ?? '';
@@ -260,14 +309,16 @@ class _ScannedManagerDevice {
     final dynamic managerScopeRequests = decoded['manager_scope_requests'];
     if (managerScopeRequests is! Map<String, dynamic>) {
       throw ApiException(
-        'The scanned QR code is missing manager request data.',
+        l10n?.registerManagerDeviceMissingManagerRequestData ??
+            'The scanned QR code is missing manager request data.',
       );
     }
 
     final dynamic registerDeviceData = managerScopeRequests['register_device'];
     if (registerDeviceData is! Map<String, dynamic>) {
       throw ApiException(
-        'The scanned QR code is missing register-device data.',
+        l10n?.registerManagerDeviceMissingRegisterData ??
+            'The scanned QR code is missing register-device data.',
       );
     }
 
@@ -281,7 +332,8 @@ class _ScannedManagerDevice {
 
     if (deviceIdentifier.isEmpty || publicKey.isEmpty) {
       throw ApiException(
-        'The scanned QR code is missing required device data.',
+        l10n?.registerManagerDeviceMissingRequiredData ??
+            'The scanned QR code is missing required device data.',
       );
     }
 

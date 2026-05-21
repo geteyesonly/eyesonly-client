@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/screens/add_organization_page.dart';
 import 'package:eyesonly/screens/settings_page.dart';
-import 'package:eyesonly/services/secure_decrypted_image_cache.dart';
+import 'package:eyesonly/services/secure_encrypted_image_blob_cache.dart';
 import 'package:eyesonly/services/settings_store.dart';
+
+Widget _buildTestApp({required Widget home}) {
+  return MaterialApp(
+    localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: home,
+  );
+}
 
 void main() {
   group('AddOrganizationPage', () {
@@ -111,9 +126,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: SettingsPage(settingsStore: settingsStore),
-        ),
+        _buildTestApp(home: SettingsPage(settingsStore: settingsStore)),
       );
       await tester.pumpAndSettle();
 
@@ -135,7 +148,7 @@ void main() {
       final FakeImageCache imageCache = FakeImageCache();
 
       await tester.pumpWidget(
-        MaterialApp(
+        _buildTestApp(
           home: SettingsPage(
             settingsStore: FakeSettingsStore(),
             imageCache: imageCache,
@@ -144,11 +157,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('Delete Image Cache'), 200);
-      await tester.tap(find.text('Delete Image Cache'));
+      await tester.scrollUntilVisible(
+        find.text('Delete Encrypted Image Cache'),
+        200,
+      );
+      await tester.tap(find.text('Delete Encrypted Image Cache'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('Delete all locally cached images from this device?'),
+        find.textContaining(
+          'Delete all locally cached encrypted image blobs from this device?',
+        ),
         findsOneWidget,
       );
 
@@ -165,7 +183,7 @@ void main() {
       bool resetCalled = false;
 
       await tester.pumpWidget(
-        MaterialApp(
+        _buildTestApp(
           home: SettingsPage(
             settingsStore: FakeSettingsStore(),
             resetAppAction: () async {
@@ -194,7 +212,7 @@ void main() {
 
 Future<void> _pumpPushedPage(WidgetTester tester, Widget page) async {
   await tester.pumpWidget(
-    MaterialApp(
+    _buildTestApp(
       home: Builder(
         builder: (BuildContext context) {
           return Scaffold(
@@ -298,7 +316,7 @@ class FakeSettingsStore extends SettingsStore {
   }
 }
 
-class FakeImageCache extends SecureDecryptedImageCache {
+class FakeImageCache extends SecureEncryptedImageBlobCache {
   bool clearCalled = false;
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/crypto/eyes_only_crypto.dart';
 import 'package:eyesonly/services/installation_id_store.dart';
@@ -34,6 +35,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
   bool _isSubmitting = false;
 
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
+
   @override
   void initState() {
     super.initState();
@@ -65,7 +68,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     }
 
     throw ApiException(
-      'Creator device was not linked to the new group.',
+      _l10n?.createGroupCreatorNotLinkedError ??
+          'Creator device was not linked to the new group.',
     );
   }
 
@@ -108,7 +112,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
       final String username = settings.lastLoggedInUsername?.trim() ?? '';
       if (username.isEmpty) {
         throw ApiException(
-          'No logged-in manager account found for device registration.',
+          _l10n?.createGroupNoLoggedInManagerError ??
+              'No logged-in manager account found for device registration.',
         );
       }
       await _deviceRegistrationService.requireCurrentDeviceRegistered(
@@ -124,7 +129,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
       final String groupId = (group['uuid'] as String?)?.trim() ?? '';
       if (groupId.isEmpty) {
         throw ApiException(
-          'Group was created but server returned no UUID.',
+          _l10n?.createGroupNoUuidError ??
+              'Group was created but server returned no UUID.',
           responseBody: group.toString(),
         );
       }
@@ -214,7 +220,10 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         return;
       }
 
-      ScreenFeedback.showMessage(context, 'Group created successfully.');
+      ScreenFeedback.showMessage(
+        context,
+        _l10n?.createGroupSuccess ?? 'Group created successfully.',
+      );
       Navigator.pop(context, true);
     } on ApiException catch (error) {
       if (!mounted) {
@@ -237,8 +246,10 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations? l10n = _l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Group')),
+      appBar: AppBar(title: Text(l10n?.createGroupTitle ?? 'Create Group')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -251,20 +262,21 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'New Group',
+                      l10n?.createGroupHeading ?? 'New Group',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _nameController,
                       textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: 'Name',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n?.createGroupNameLabel ?? 'Name',
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (String? value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Name is required';
+                          return l10n?.createGroupNameRequired ??
+                              'Name is required';
                         }
                         return null;
                       },
@@ -274,7 +286,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                     FilledButton(
                       onPressed: _isSubmitting ? null : _submitCreateGroup,
                       child: Text(
-                        _isSubmitting ? 'Creating...' : 'Create Group',
+                        _isSubmitting
+                            ? (l10n?.createGroupCreating ?? 'Creating...')
+                            : (l10n?.createGroupTitle ?? 'Create Group'),
                       ),
                     ),
                   ],

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 import 'package:eyesonly/screens/scan_qr_code_page.dart';
 import 'package:eyesonly/services/api_exception.dart';
@@ -35,15 +36,17 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
   bool _isSubmitting = false;
   _ScannedJoinRequest? _scannedJoinRequest;
 
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
+
   bool get _hasDeviceData => _scannedJoinRequest != null;
 
   Future<void> _openScanDevicePage() async {
     final String? rawValue = await Navigator.push<String>(
       context,
       MaterialPageRoute<String>(
-        builder: (BuildContext context) => const ScanQrCodePage(
-          title: 'Scan Device',
-          instruction:
+        builder: (BuildContext context) => ScanQrCodePage(
+          title: _l10n?.groupAddScanDeviceTitle ?? 'Scan Device',
+          instruction: _l10n?.groupAddScanDeviceInstruction ??
               'Scan the device QR code to capture its installation identifier and public key.',
         ),
       ),
@@ -56,6 +59,7 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
     try {
       final _ScannedJoinRequest request = _ScannedJoinRequest.fromQrPayload(
         rawValue: rawValue,
+        l10n: _l10n,
       );
       final String scannedBaseUrl = request.apiUrl.trim();
       final String currentBaseUrl = widget.baseUrl.trim();
@@ -63,32 +67,44 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
         final bool? proceed = await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
-            title: const Text('Server URL mismatch'),
+            title: Text(
+              _l10n?.groupAddServerUrlMismatchTitle ?? 'Server URL mismatch',
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'The scanned device is registered to a different server address than the one you are currently managing. This may be normal if the same server is reachable at multiple addresses (e.g. emulator vs. physical device on the same network).',
+                Text(
+                  _l10n?.groupAddServerUrlMismatchBody ??
+                      'The scanned device is registered to a different server address than the one you are currently managing. This may be normal if the same server is reachable at multiple addresses (e.g. emulator vs. physical device on the same network).',
                 ),
                 const SizedBox(height: 16),
-                Text('Current server:', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  _l10n?.groupAddCurrentServerLabel ?? 'Current server:',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 Text(currentBaseUrl, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 8),
-                Text('Device server:', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  _l10n?.groupAddDeviceServerLabel ?? 'Device server:',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 Text(scannedBaseUrl, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 16),
-                const Text('Only continue if you are sure both addresses point to the same server.'),
+                Text(
+                  _l10n?.groupAddServerUrlMismatchWarning ??
+                      'Only continue if you are sure both addresses point to the same server.',
+                ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text(_l10n?.groupAddCancel ?? 'Cancel'),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Add anyway'),
+                child: Text(_l10n?.groupAddAddAnyway ?? 'Add anyway'),
               ),
             ],
           ),
@@ -154,7 +170,8 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
 
       ScreenFeedback.showMessage(
         context,
-        'Added ${_nameController.text.trim()} to ${widget.groupName}.',
+        _l10n?.groupAddAddedMember(_nameController.text.trim(), widget.groupName) ??
+            'Added ${_nameController.text.trim()} to ${widget.groupName}.',
       );
       Navigator.of(context).pop(true);
     } on ApiException catch (error) {
@@ -182,11 +199,14 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
     required bool isComplete,
     String? details,
   }) {
+    final AppLocalizations? l10n = _l10n;
     final Color color = isComplete
         ? Theme.of(context).colorScheme.primary
         : Theme.of(context).colorScheme.error;
     final IconData icon = isComplete ? Icons.check_circle : Icons.error_outline;
-    final String statusText = isComplete ? 'Ready' : 'Required';
+    final String statusText = isComplete
+      ? (l10n?.groupAddStatusReady ?? 'Ready')
+      : (l10n?.groupAddStatusRequired ?? 'Required');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -223,9 +243,10 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
   @override
   Widget build(BuildContext context) {
     final _ScannedJoinRequest? scannedJoinRequest = _scannedJoinRequest;
+    final AppLocalizations? l10n = _l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Device')),
+      appBar: AppBar(title: Text(l10n?.groupAddDeviceTitle ?? 'Add Device')),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -244,15 +265,15 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
               const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  hintText: 'Enter a name for this device',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n?.groupAddNameLabel ?? 'Name',
+                  hintText: l10n?.groupAddNameHint ?? 'Enter a name for this device',
+                  border: const OutlineInputBorder(),
                 ),
                 textInputAction: TextInputAction.next,
                 validator: (String? value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Name is required';
+                    return l10n?.groupAddNameRequired ?? 'Name is required';
                   }
                   return null;
                 },
@@ -260,7 +281,7 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
               const SizedBox(height: 24),
               _buildRequirementRow(
                 context: context,
-                label: 'Device',
+                label: l10n?.groupAddDeviceLabel ?? 'Device',
                 isComplete: scannedJoinRequest != null,
               ),
               const SizedBox(height: 8),
@@ -269,13 +290,17 @@ class _GroupAddDevicePageState extends State<GroupAddDevicePage> {
                 child: FilledButton.icon(
                   onPressed: _isSubmitting ? null : _openScanDevicePage,
                   icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scan Device'),
+                  label: Text(l10n?.groupAddScanDeviceAction ?? 'Scan Device'),
                 ),
               ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _isSubmitting || !_hasDeviceData ? null : _submit,
-                child: Text(_isSubmitting ? 'Adding Device...' : 'Add Device'),
+                child: Text(
+                  _isSubmitting
+                      ? (l10n?.groupAddAddingDevice ?? 'Adding Device...')
+                      : (l10n?.groupAddDeviceAction ?? 'Add Device'),
+                ),
               ),
             ],
           ),
@@ -298,25 +323,40 @@ class _ScannedJoinRequest {
   final String publicKey;
   final String publicKeyAlgorithm;
 
-  factory _ScannedJoinRequest.fromQrPayload({required String rawValue}) {
+  factory _ScannedJoinRequest.fromQrPayload({
+    required String rawValue,
+    AppLocalizations? l10n,
+  }) {
     final dynamic decoded = jsonDecode(rawValue);
     if (decoded is! Map<String, dynamic>) {
-      throw ApiException('The scanned QR code did not contain valid JSON data.');
+      throw ApiException(
+        l10n?.scanQrInvalidJson ??
+            'The scanned QR code did not contain valid JSON data.',
+      );
     }
 
     final String type = (decoded['type'] as String?)?.trim() ?? '';
     if (type != 'eyesonly-device-join') {
-      throw ApiException('The scanned QR code is not a device join code.');
+      throw ApiException(
+        l10n?.groupAddNotJoinCode ??
+            'The scanned QR code is not a device join code.',
+      );
     }
 
     final String apiUrl = (decoded['api_url'] as String?)?.trim() ?? '';
     final dynamic managerScopeRequests = decoded['manager_scope_requests'];
     if (managerScopeRequests is! Map<String, dynamic>) {
-      throw ApiException('The scanned QR code is missing manager request data.');
+      throw ApiException(
+        l10n?.groupAddMissingManagerRequestData ??
+            'The scanned QR code is missing manager request data.',
+      );
     }
     final dynamic registerDevice = managerScopeRequests['register_device'];
     if (registerDevice is! Map<String, dynamic>) {
-      throw ApiException('The scanned QR code is missing register-device data.');
+      throw ApiException(
+        l10n?.groupAddMissingRegisterData ??
+            'The scanned QR code is missing register-device data.',
+      );
     }
 
     final String deviceIdentifier =
@@ -329,7 +369,10 @@ class _ScannedJoinRequest {
         deviceIdentifier.isEmpty ||
         publicKey.isEmpty ||
         publicKeyAlgorithm.isEmpty) {
-      throw ApiException('The scanned QR code is missing required device data.');
+      throw ApiException(
+        l10n?.groupAddMissingRequiredData ??
+            'The scanned QR code is missing required device data.',
+      );
     }
 
     return _ScannedJoinRequest(

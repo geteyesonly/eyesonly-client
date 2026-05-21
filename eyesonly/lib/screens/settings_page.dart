@@ -4,8 +4,9 @@ import 'package:eyesonly/screens/add_organization_page.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/push_notifications_service.dart';
 import 'package:eyesonly/services/reset_service.dart';
-import 'package:eyesonly/services/secure_decrypted_image_cache.dart';
+import 'package:eyesonly/services/secure_encrypted_image_blob_cache.dart';
 import 'package:eyesonly/services/settings_store.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 typedef SettingsDeviceSupportChecker = Future<bool> Function();
 typedef SettingsDeviceAuthenticator = Future<bool> Function();
@@ -24,7 +25,7 @@ class SettingsPage extends StatefulWidget {
 
   final LocalAuthentication? localAuthentication;
   final SettingsStore? settingsStore;
-  final SecureDecryptedImageCache? imageCache;
+  final SecureEncryptedImageBlobCache? imageCache;
   final Future<void> Function()? resetAppAction;
   final SettingsDeviceSupportChecker? deviceSupportChecker;
   final SettingsDeviceAuthenticator? deviceAuthenticator;
@@ -37,7 +38,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late final LocalAuthentication _localAuthentication;
   late final SettingsStore _settingsStore;
-  late final SecureDecryptedImageCache _imageCache;
+  late final SecureEncryptedImageBlobCache _imageCache;
   late final PushNotificationsService _pushNotificationsService;
   String? _managerServerURL;
   bool _managerModeEnabled = AppSettings.defaults.managerModeEnabled;
@@ -54,7 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _localAuthentication = widget.localAuthentication ?? LocalAuthentication();
     _settingsStore = widget.settingsStore ?? SettingsStore();
-    _imageCache = widget.imageCache ?? SecureDecryptedImageCache();
+    _imageCache = widget.imageCache ?? SecureEncryptedImageBlobCache();
     _pushNotificationsService =
       widget.pushNotificationsService ?? PushNotificationsService();
     _loadSettings();
@@ -115,22 +116,21 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _confirmRemoveOrganization(AppOrganization organization) async {
+    final l10n = AppLocalizations.of(context)!;
     final bool? shouldRemove = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Remove Organization'),
-          content: Text(
-            'Do you want to remove ${organization.name} from this device?\n\nThis only removes the local organization entry.',
-          ),
+          title: Text(l10n.settingsRemoveOrganizationTitle),
+          content: Text(l10n.settingsRemoveOrganizationContent(organization.name)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Remove'),
+              child: Text(l10n.delete),
             ),
           ],
         );
@@ -164,9 +164,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!mounted) {
         return;
       }
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No device authentication is available on this device.'),
+        SnackBar(
+          content: Text(l10n.settingsDeviceLockNotAvailable),
         ),
       );
       setState(() {
@@ -191,8 +192,9 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _useBiometricLock = false;
       });
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Device lock was not enabled.')),
+        SnackBar(content: Text(l10n.settingsDeviceLockNotEnabled)),
       );
       return;
     }
@@ -216,22 +218,21 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final bool? shouldClear = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Image Cache'),
-          content: const Text(
-            'Delete all locally cached images from this device?\n\nThe next time you open Photos, images will be fetched again.',
-          ),
+          title: Text(l10n.settingsDeleteImageCacheDialogTitle),
+          content: Text(l10n.settingsDeleteImageCacheDialogContent),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete Cache'),
+              child: Text(l10n.settingsDeleteCache),
             ),
           ],
         );
@@ -251,15 +252,17 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!mounted) {
         return;
       }
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Image cache deleted.')),
+        SnackBar(content: Text(l10n.settingsImageCacheDeleted)),
       );
     } catch (error) {
       if (!mounted) {
         return;
       }
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete image cache: $error')),
+        SnackBar(content: Text(l10n.settingsImageCacheDeleteFailed(error.toString()))),
       );
     } finally {
       if (mounted) {
@@ -279,9 +282,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final String? fallbackBaseUrl = _managerServerURL?.trim();
     if (organizationUrls.isEmpty &&
         (fallbackBaseUrl == null || fallbackBaseUrl.isEmpty)) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Add an organization first.'),
+        SnackBar(
+          content: Text(l10n.settingsAddOrgFirst),
         ),
       );
       return;
@@ -323,9 +327,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!mounted) {
         return;
       }
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not update push notifications: $error'),
+          content: Text(l10n.settingsPushNotificationsFailed(error.toString())),
         ),
       );
     } finally {
@@ -338,18 +343,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showResetAppDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Reset App'),
-          content: const Text(
-            'Warning: Resetting the app will remove local keys, tokens, installation identity, organizations, cached images, and app settings. This action cannot be undone.\n\nAre you sure you want to continue?',
-          ),
+          title: Text(l10n.settingsResetAppDialogTitle),
+          content: Text(l10n.settingsResetAppDialogContent),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -357,7 +361,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 await _resetApp();
               },
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Reset'),
+              child: Text(l10n.settingsReset),
             ),
           ],
         );
@@ -372,38 +376,39 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settingsTitle),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
         children: [
           // General Section
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Text('General', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Text(l10n.settingsGeneral, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           SwitchListTile(
-            title: const Text('Device Lock'),
-            subtitle: const Text('Require face, fingerprint, or device code'),
+            title: Text(l10n.settingsDeviceLock),
+            subtitle: Text(l10n.settingsDeviceLockSubtitle),
             value: _useBiometricLock,
             onChanged: (value) async {
               await _setBiometricLock(value);
             },
           ),
           SwitchListTile(
-            title: const Text('Push Notifications'),
-            subtitle: const Text('Receive notifications when new pictures are uploaded'),
+            title: Text(l10n.settingsPushNotifications),
+            subtitle: Text(l10n.settingsPushNotificationsSubtitle),
             value: _pushNotificationsEnabled,
             onChanged: _isUpdatingPushNotifications
                 ? null
                 : _setPushNotificationsEnabled,
           ),
           SwitchListTile(
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Use a darker appearance at night'),
+            title: Text(l10n.settingsDarkMode),
+            subtitle: Text(l10n.settingsDarkModeSubtitle),
             value: _darkMode,
             onChanged: (value) async {
               setState(() {
@@ -413,8 +418,8 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           SwitchListTile(
-            title: const Text('Manager Mode'),
-            subtitle: const Text('Enable manager mode features'),
+            title: Text(l10n.settingsManagerMode),
+            subtitle: Text(l10n.settingsManagerModeSubtitle),
             value: _managerModeEnabled,
             onChanged: (value) async {
               setState(() {
@@ -430,14 +435,14 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(),
 
           // Organizations Section
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Text('Organizations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Text(l10n.settingsOrganizations, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           if (_organizations.isEmpty)
-            const ListTile(
-              title: Text('No organizations yet'),
-              subtitle: Text('Add an organization to connect this device.'),
+            ListTile(
+              title: Text(l10n.settingsNoOrganizations),
+              subtitle: Text(l10n.settingsNoOrganizationsSubtitle),
             )
           else
             ..._organizations.map((AppOrganization organization) {
@@ -460,27 +465,27 @@ class _SettingsPageState extends State<SettingsPage> {
               child: OutlinedButton.icon(
                 onPressed: _openAddOrganizationPage,
                 icon: const Icon(Icons.add_business),
-                label: const Text('Add Organization'),
+                label: Text(l10n.settingsAddOrganization),
               ),
             ),
           ),
           if (_managerModeEnabled) ...[
             const Divider(),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-              child: Text('Manager Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Text(l10n.settingsManagerSettings, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: _organizations.isEmpty
-                  ? const Text(
-                      'Add an organization first to select a manager server.',
-                      style: TextStyle(color: Colors.grey),
+                  ? Text(
+                      l10n.settingsManagerAddOrgFirst,
+                      style: const TextStyle(color: Colors.grey),
                     )
                   : DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Manager Organization',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.settingsManagerOrganization,
+                        border: const OutlineInputBorder(),
                       ),
                       initialValue: _organizations.any(
                         (AppOrganization o) => o.apiUrl == _managerServerURL,
@@ -511,16 +516,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.cleaning_services_outlined),
-            title: const Text('Delete Image Cache'),
-            subtitle: const Text('Remove locally cached decrypted images'),
+            title: Text(l10n.settingsDeleteImageCache),
+            subtitle: Text(l10n.settingsDeleteImageCacheSubtitle),
             enabled: !_isClearingImageCache,
             onTap: _clearImageCache,
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.restart_alt),
-            title: const Text('Reset App'),
-            subtitle: const Text('Remove local keys, tokens, organizations, and app settings'),
+            title: Text(l10n.settingsResetApp),
+            subtitle: Text(l10n.settingsResetAppSubtitle),
             textColor: Theme.of(context).colorScheme.error,
             iconColor: Theme.of(context).colorScheme.error,
             onTap: _showResetAppDialog,
@@ -528,8 +533,8 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text('App Version'),
-            subtitle: const Text('1.0.0'),
+            title: Text(l10n.settingsAppVersion),
+            subtitle: Text(l10n.settingsAppVersionValue),
             onTap: () {},
           ),
         ],

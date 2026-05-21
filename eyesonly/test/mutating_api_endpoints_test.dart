@@ -303,4 +303,79 @@ void main() {
     },
     skip: managerMutationSkipReason,
   );
+
+  test(
+    'upload encrypted blob with expires_at field is accepted by the backend',
+    () async {
+      final ManagerSession session = await loginManager(client);
+      CreatedGroup? group;
+
+      try {
+        group = await createTemporaryGroup(client, session);
+        final DeviceKeyMaterial device = await generateDeviceKeyMaterial(
+          label: 'expiration-test',
+        );
+
+        await registerDevice(client, session, device);
+        await addDeviceToGroup(client, session, device, group.groupId);
+        await createGroupKeyEnvelope(
+          client,
+          session,
+          device: device,
+          group: group,
+        );
+
+        final DateTime expiresAt = DateTime.now().add(const Duration(days: 14));
+        final Uint8List uploadedEncryptedBytes = await uploadEncryptedBlob(
+          client,
+          session,
+          groupId: group.groupId,
+          recipient: device,
+          expiresAt: expiresAt,
+        );
+
+        final DeviceSession deviceSession = await authenticateDevice(
+          client,
+          device,
+        );
+
+        final String imageUuid = await pollUntil(
+          () async {
+            final Map<String, dynamic> imageListResponse = await getEncryptedImages(
+              client,
+              deviceSession,
+            );
+            final String? currentImageUuid = findFirstImageUuidForGroup(
+              imageListResponse,
+              group!.groupId,
+            );
+            if (currentImageUuid != null) {
+              return currentImageUuid;
+            }
+            return null;
+          },
+          description: 'uploaded image with expires_at to appear in the device image feed',
+        );
+
+        final http.Response blobResponse = await client.get(
+          apiUri(DeviceApiEndpoints.deviceEncryptedImageBlob(imageUuid)),
+          headers: deviceBinaryHeaders(deviceSession),
+        );
+        expect(blobResponse.statusCode, 200);
+        expect(blobResponse.bodyBytes, uploadedEncryptedBytes);
+
+        await deleteEncryptedImage(
+          client,
+          deviceSession,
+          groupId: group.groupId,
+          imageUuid: imageUuid,
+        );
+      } finally {
+        if (group != null) {
+          await tryDeleteGroup(client, session, group.groupId);
+        }
+      }
+    },
+    skip: managerMutationSkipReason,
+  );
 }

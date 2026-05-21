@@ -835,21 +835,6 @@ class ManagerApiService {
     return 'Logout request failed (${response.statusCode}).';
   }
 
-  String _buildDeviceRegistrationErrorMessage(http.Response response) {
-    final dynamic decoded = _tryDecodeJson(response.body);
-    final String? detailError = _extractFieldError(
-      decoded is Map<String, dynamic>
-          ? decoded['detail'] ?? decoded['non_field_errors'] ?? decoded
-          : decoded,
-    );
-
-    if (detailError != null) {
-      return detailError;
-    }
-
-    return 'Device registration failed (${response.statusCode}).';
-  }
-
   String _buildCreateGroupKeyEnvelopeErrorMessage(http.Response response) {
     final dynamic decoded = _tryDecodeJson(response.body);
     final String? detailError = _extractFieldError(
@@ -882,21 +867,6 @@ class ManagerApiService {
     }
 
     return 'Sending group notification failed (${response.statusCode}).';
-  }
-
-  String _buildCreateGroupErrorMessage(http.Response response) {
-    final dynamic decoded = _tryDecodeJson(response.body);
-    final String? detailError = _extractFieldError(
-      decoded is Map<String, dynamic>
-          ? decoded['detail'] ?? decoded['non_field_errors'] ?? decoded
-          : decoded,
-    );
-
-    if (detailError != null) {
-      return detailError;
-    }
-
-    return 'Creating group failed (${response.statusCode}).';
   }
 
   String _buildUpdateGroupErrorMessage(http.Response response) {
@@ -990,7 +960,55 @@ class ManagerApiService {
   }
 
   String _buildUploadEncryptedBlobErrorMessage(http.Response response) {
+    return _build403QuotaErrorMessage(
+      response,
+      quotaType: 'images',
+      fallbackMessage: 'Uploading encrypted blob failed',
+    );
+  }
+
+  String _buildDeviceRegistrationErrorMessage(http.Response response) {
+    // Override the base implementation to handle quota
+    return _build403QuotaErrorMessage(
+      response,
+      quotaType: 'devices',
+      fallbackMessage: 'Device registration failed',
+    );
+  }
+
+  String _buildCreateGroupErrorMessage(http.Response response) {
+    // Override the base implementation to handle quota
+    return _build403QuotaErrorMessage(
+      response,
+      quotaType: 'groups',
+      fallbackMessage: 'Creating group failed',
+    );
+  }
+
+  /// Builds error messages for 403 responses with quota information.
+  /// 
+  /// Attempts to parse `quota`, `current`, and `maximum` fields from the response.
+  /// If found, constructs a user-friendly message. Falls back to `detail` field
+  /// or a generic message if quota fields are unavailable.
+  String _build403QuotaErrorMessage(
+    http.Response response, {
+    required String quotaType,
+    required String fallbackMessage,
+  }) {
     final dynamic decoded = _tryDecodeJson(response.body);
+
+    if (response.statusCode == 403 && decoded is Map<String, dynamic>) {
+      final String? quotaKey = (decoded['quota'] as String?)?.trim();
+      final int? current = decoded['current'] as int?;
+      final int? maximum = decoded['maximum'] as int?;
+
+      // If we have quota details, build a helpful message
+      if (quotaKey != null && quotaKey.isNotEmpty && current != null && maximum != null) {
+        return '$fallbackMessage: Maximum $quotaType quota reached ($current/$maximum).';
+      }
+    }
+
+    // Fall back to detail field or generic message
     final String? detailError = _extractFieldError(
       decoded is Map<String, dynamic>
           ? decoded['detail'] ?? decoded['non_field_errors'] ?? decoded
@@ -1001,7 +1019,7 @@ class ManagerApiService {
       return detailError;
     }
 
-    return 'Uploading encrypted blob failed (${response.statusCode}).';
+    return '$fallbackMessage (${response.statusCode}).';
   }
 
   dynamic _tryDecodeJson(String body) {

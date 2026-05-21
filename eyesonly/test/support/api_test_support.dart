@@ -648,6 +648,7 @@ Future<Uint8List> uploadEncryptedBlob(
   ManagerSession session, {
   required String groupId,
   required DeviceKeyMaterial recipient,
+  DateTime? expiresAt,
 }) async {
   final List<int> contentKeyBytes = await EyesOnlyCrypto.generateKey();
   final Uint8List plainBytes = Uint8List.fromList(
@@ -684,6 +685,9 @@ Future<Uint8List> uploadEncryptedBlob(
       },
     ],
   );
+  if (expiresAt != null) {
+    request.fields['expires_at'] = expiresAt.toUtc().toIso8601String();
+  }
   request.files.add(
     http.MultipartFile.fromBytes(
       'encrypted_blob',

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:eyesonly/l10n/app_localizations.dart';
 
 import 'package:eyesonly/screens/scan_qr_code_page.dart';
 import 'package:eyesonly/services/api_exception.dart';
@@ -37,15 +38,17 @@ class _GroupAddManagerDevicePageState
   bool _isSubmitting = false;
   _ScannedManagerJoinRequest? _scannedJoinRequest;
 
+  AppLocalizations? get _l10n => AppLocalizations.of(context);
+
   bool get _hasDeviceData => _scannedJoinRequest != null;
 
   Future<void> _openScanDevicePage() async {
     final String? rawValue = await Navigator.push<String>(
       context,
       MaterialPageRoute<String>(
-        builder: (BuildContext context) => const ScanQrCodePage(
-          title: 'Scan Manager Device',
-          instruction:
+        builder: (BuildContext context) => ScanQrCodePage(
+          title: _l10n?.groupAddManagerScanTitle ?? 'Scan Manager Device',
+          instruction: _l10n?.groupAddManagerScanInstruction ??
               'On the other manager\'s device, go to Groups → Join Group and scan the QR code shown there.',
         ),
       ),
@@ -57,7 +60,10 @@ class _GroupAddManagerDevicePageState
 
     try {
       final _ScannedManagerJoinRequest request =
-          _ScannedManagerJoinRequest.fromQrPayload(rawValue: rawValue);
+          _ScannedManagerJoinRequest.fromQrPayload(
+            rawValue: rawValue,
+            l10n: _l10n,
+          );
 
       final String scannedBaseUrl = request.apiUrl.trim();
       final String currentBaseUrl = widget.baseUrl.trim();
@@ -65,34 +71,44 @@ class _GroupAddManagerDevicePageState
         final bool? proceed = await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
-            title: const Text('Server URL mismatch'),
+            title: Text(
+              _l10n?.groupAddServerUrlMismatchTitle ?? 'Server URL mismatch',
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'The scanned device reports a different server address. This may be normal if both addresses point to the same server (e.g. emulator vs. physical device).',
+                Text(
+                  _l10n?.groupAddManagerServerUrlMismatchBody ??
+                      'The scanned device reports a different server address. This may be normal if both addresses point to the same server (e.g. emulator vs. physical device).',
                 ),
                 const SizedBox(height: 16),
-                Text('Current server:', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  _l10n?.groupAddCurrentServerLabel ?? 'Current server:',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 Text(currentBaseUrl, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 8),
-                Text('Device server:', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  _l10n?.groupAddDeviceServerLabel ?? 'Device server:',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 Text(scannedBaseUrl, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 16),
-                const Text(
-                  'Only continue if you are sure both addresses point to the same server.',
+                Text(
+                  _l10n?.groupAddServerUrlMismatchWarning ??
+                      'Only continue if you are sure both addresses point to the same server.',
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text(_l10n?.groupAddCancel ?? 'Cancel'),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Add anyway'),
+                child: Text(_l10n?.groupAddAddAnyway ?? 'Add anyway'),
               ),
             ],
           ),
@@ -107,7 +123,8 @@ class _GroupAddManagerDevicePageState
           ScreenFeedback.showError(
             context,
             ApiException(
-              'This QR code does not include a manager account. Make sure the other manager is logged in before showing the QR code.',
+              _l10n?.groupAddManagerMissingOwnerUser ??
+                  'This QR code does not include a manager account. Make sure the other manager is logged in before showing the QR code.',
             ),
           );
         }
@@ -173,7 +190,8 @@ class _GroupAddManagerDevicePageState
 
       ScreenFeedback.showMessage(
         context,
-        'Added ${_nameController.text.trim()} to ${widget.groupName}.',
+        _l10n?.groupAddAddedMember(_nameController.text.trim(), widget.groupName) ??
+            'Added ${_nameController.text.trim()} to ${widget.groupName}.',
       );
       Navigator.of(context).pop(true);
     } on ApiException catch (error) {
@@ -204,9 +222,12 @@ class _GroupAddManagerDevicePageState
   @override
   Widget build(BuildContext context) {
     final _ScannedManagerJoinRequest? scannedJoinRequest = _scannedJoinRequest;
+    final AppLocalizations? l10n = _l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Manager Device')),
+      appBar: AppBar(
+        title: Text(l10n?.groupAddManagerDeviceTitle ?? 'Add Manager Device'),
+      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -224,21 +245,22 @@ class _GroupAddManagerDevicePageState
               ),
               const SizedBox(height: 16),
               Text(
-                'Scan the QR code shown on the other manager\'s device (Groups → Join Group) while they are logged in as a manager.',
+                l10n?.groupAddManagerInstruction ??
+                    'Scan the QR code shown on the other manager\'s device (Groups → Join Group) while they are logged in as a manager.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  hintText: 'Enter a name for this device',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n?.groupAddNameLabel ?? 'Name',
+                  hintText: l10n?.groupAddNameHint ?? 'Enter a name for this device',
+                  border: const OutlineInputBorder(),
                 ),
                 textInputAction: TextInputAction.done,
                 validator: (String? value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Name is required';
+                    return l10n?.groupAddNameRequired ?? 'Name is required';
                   }
                   return null;
                 },
@@ -257,7 +279,10 @@ class _GroupAddManagerDevicePageState
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    scannedJoinRequest != null ? 'Device scanned' : 'Scan required',
+                    scannedJoinRequest != null
+                        ? (l10n?.registerManagerDeviceScanned ?? 'Device scanned')
+                        : (l10n?.registerManagerDeviceScanRequired ??
+                            'Scan required'),
                     style: TextStyle(
                       color: scannedJoinRequest != null
                           ? Theme.of(context).colorScheme.primary
@@ -272,14 +297,19 @@ class _GroupAddManagerDevicePageState
                 child: FilledButton.icon(
                   onPressed: _isSubmitting ? null : _openScanDevicePage,
                   icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scan Device QR'),
+                  label: Text(
+                    l10n?.registerManagerDeviceScanDeviceQr ?? 'Scan Device QR',
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _isSubmitting || !_hasDeviceData ? null : _submit,
                 child: Text(
-                  _isSubmitting ? 'Adding Device...' : 'Add Manager Device',
+                  _isSubmitting
+                      ? (l10n?.groupAddAddingDevice ?? 'Adding Device...')
+                      : (l10n?.groupAddManagerDeviceAction ??
+                          'Add Manager Device'),
                 ),
               ),
             ],
@@ -308,15 +338,22 @@ class _ScannedManagerJoinRequest {
 
   factory _ScannedManagerJoinRequest.fromQrPayload({
     required String rawValue,
+    AppLocalizations? l10n,
   }) {
     final dynamic decoded = jsonDecode(rawValue);
     if (decoded is! Map<String, dynamic>) {
-      throw ApiException('The scanned QR code did not contain valid JSON data.');
+      throw ApiException(
+        l10n?.scanQrInvalidJson ??
+            'The scanned QR code did not contain valid JSON data.',
+      );
     }
 
     final String type = (decoded['type'] as String?)?.trim() ?? '';
     if (type != 'eyesonly-device-join') {
-      throw ApiException('The scanned QR code is not a device join code.');
+      throw ApiException(
+        l10n?.groupAddNotJoinCode ??
+            'The scanned QR code is not a device join code.',
+      );
     }
 
     final String apiUrl = (decoded['api_url'] as String?)?.trim() ?? '';
@@ -330,13 +367,17 @@ class _ScannedManagerJoinRequest {
 
     final dynamic managerScopeRequests = decoded['manager_scope_requests'];
     if (managerScopeRequests is! Map<String, dynamic>) {
-      throw ApiException('The scanned QR code is missing manager request data.');
+      throw ApiException(
+        l10n?.groupAddMissingManagerRequestData ??
+            'The scanned QR code is missing manager request data.',
+      );
     }
 
     final dynamic registerDeviceData = managerScopeRequests['register_device'];
     if (registerDeviceData is! Map<String, dynamic>) {
       throw ApiException(
-        'The scanned QR code is missing register-device data.',
+        l10n?.groupAddMissingRegisterData ??
+            'The scanned QR code is missing register-device data.',
       );
     }
 
@@ -350,7 +391,8 @@ class _ScannedManagerJoinRequest {
 
     if (deviceIdentifier.isEmpty || publicKey.isEmpty) {
       throw ApiException(
-        'The scanned QR code is missing required device data.',
+        l10n?.groupAddMissingRequiredData ??
+            'The scanned QR code is missing required device data.',
       );
     }
 
