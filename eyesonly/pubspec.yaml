@@ -118,8 +118,8 @@ flutter_native_splash:
   web: true
   color: "#f4e4ff"
   color_dark: "#f4e4ff"
-  image: web/icons/splash-1024.png
-  image_dark: web/icons/splash-1024.png
+  image: web/icons/Icon-maskable-512.png
+  image_dark: web/icons/Icon-maskable-512.png
   android_gravity: center
   ios_content_mode: center
   web_image_mode: contain
@@ -130,8 +130,14 @@ flutter_native_splash:
   android_12:
     color: "#f4e4ff"
     color_dark: "#f4e4ff"
-    image: web/icons/splash-1024.png
-    image_dark: web/icons/splash-1024.png
+    # Android 12 masks the splash icon into a circle, so avoid text/wordmark assets here.
+    image: web/icons/Icon-maskable-512.png
+    image_dark: web/icons/Icon-maskable-512.png
+    # Keep the wordmark text as Android 12 branding (shown below the icon).
+    branding: web/icons/branding-800.png
+    branding_dark: web/icons/branding-800.png
+    icon_background_color: "#f4e4ff"
+    icon_background_color_dark: "#f4e4ff"
     # Optional for Android 12 if you use background images above.
     # icon_background_color: "#f4e4ff"
     # icon_background_color_dark: "#1a1024"
@@ -141,6 +147,6 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   image_path_android: web/icons/Icon-512.png
-  image_path_ios: web/icons/launcher-ios-512.png
+  image_path_ios: web/icons/Icon-512.png
   adaptive_icon_foreground: web/icons/Icon-512.png
   adaptive_icon_background: "#f4e4ff"

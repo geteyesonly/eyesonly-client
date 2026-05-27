@@ -12,7 +12,7 @@ const String _cacheEncryptionKeyStorageKey =
   'secure_decrypted_image_cache_key_v2';
 const String _cacheDirectoryName = 'secure_decrypted_image_cache_v2';
 const String _cacheEntryFileExtension = '.cache';
-const Duration _cacheTtl = Duration(days: 1);
+const Duration _cacheTtl = Duration(days: 30);
 
 class SecureEncryptedImageBlobCacheEntry {
   const SecureEncryptedImageBlobCacheEntry({
@@ -108,15 +108,21 @@ class SecureEncryptedImageBlobCache {
     await file.writeAsString(jsonEncode(encodedEntry), flush: true);
   }
 
-  Future<void> pruneToActiveImageUuids(Set<String> activeImageUuids) async {
+  Future<void> pruneToActiveImageUuids(
+    Set<String> activeImageUuids, {
+    bool pruneInactiveEntries = true,
+  }) async {
     final Directory directory = await _cacheDirectory();
     if (!await directory.exists()) {
       return;
     }
 
-    final Set<String> allowedFileNames = <String>{
-      for (final String imageUuid in activeImageUuids) await _hashedFileName(imageUuid),
-    };
+    final Set<String> allowedFileNames = pruneInactiveEntries
+        ? <String>{
+            for (final String imageUuid in activeImageUuids)
+              await _hashedFileName(imageUuid),
+          }
+        : <String>{};
     await for (final FileSystemEntity entity in directory.list()) {
       if (entity is! File) {
         continue;
@@ -125,7 +131,8 @@ class SecureEncryptedImageBlobCache {
       final String fileName = entity.uri.pathSegments.isNotEmpty
           ? entity.uri.pathSegments.last
           : '';
-      final bool shouldDeleteForId = !allowedFileNames.contains(fileName);
+      final bool shouldDeleteForId =
+          pruneInactiveEntries && !allowedFileNames.contains(fileName);
       final bool shouldDeleteForAge = await _isExpired(entity);
       if (!shouldDeleteForId && !shouldDeleteForAge) {
         continue;

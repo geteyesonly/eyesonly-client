@@ -141,12 +141,16 @@ class DeviceEncryptedImageFeedService {
 
   Future<void> loadFeedProgressively({
     required AppSettings settings,
+    List<DeviceEncryptedImageFeedSection> existingSections =
+        const <DeviceEncryptedImageFeedSection>[],
     required void Function(
       List<DeviceEncryptedImageFeedSection> sections,
       bool isComplete,
     )
     onUpdate,
   }) async {
+    final Map<String, DeviceEncryptedImageFeedItem> existingItemsByUuid =
+        _indexItemsByImageUuid(existingSections);
     final List<_OrgSource> orgSources = settings.organizations.isNotEmpty
         ? settings.organizations
               .map(
@@ -165,51 +169,61 @@ class DeviceEncryptedImageFeedService {
     List<DeviceEncryptedImageFeedSection> sections =
         <DeviceEncryptedImageFeedSection>[];
     final Set<String> activeImageUuids = <String>{};
+    bool didLoadAllSources = false;
 
-    for (final _OrgSource source in orgSources) {
-      final _ProgressiveOrganizationFeed progressiveFeed =
-          await _prepareProgressiveFeedForOrganization(source);
-      if (progressiveFeed.sections.isEmpty) {
-        continue;
-      }
+    try {
+      for (final _OrgSource source in orgSources) {
+        final _ProgressiveOrganizationFeed progressiveFeed =
+            await _prepareProgressiveFeedForOrganization(
+              source,
+              existingItemsByUuid,
+            );
+        if (progressiveFeed.sections.isEmpty) {
+          continue;
+        }
 
-      activeImageUuids.addAll(
-        progressiveFeed.itemRefs.map(
-          (_ProgressiveFeedItemRef itemRef) => itemRef.image.imageUuid,
-        ),
-      );
-
-      sections = _sortSections(<DeviceEncryptedImageFeedSection>[
-        ...sections,
-        ...progressiveFeed.sections,
-      ]);
-      onUpdate(
-        List<DeviceEncryptedImageFeedSection>.unmodifiable(sections),
-        false,
-      );
-
-      for (final _ProgressiveFeedItemRef itemRef in progressiveFeed.itemRefs) {
-        final DeviceEncryptedImageFeedItem item = await _buildFeedItem(
-          deviceApiService: progressiveFeed.deviceApiService,
-          image: itemRef.image,
-          baseUrl: source.baseUrl,
-          groupId: itemRef.groupId,
+        activeImageUuids.addAll(
+          progressiveFeed.itemRefs.map(
+            (_ProgressiveFeedItemRef itemRef) => itemRef.image.imageUuid,
+          ),
         );
-        sections = _replaceFeedItem(
-          sections: sections,
-          sectionId: itemRef.sectionId,
-          dayIndex: itemRef.dayIndex,
-          itemIndex: itemRef.itemIndex,
-          item: item,
-        );
+
+        sections = _sortSections(<DeviceEncryptedImageFeedSection>[
+          ...sections,
+          ...progressiveFeed.sections,
+        ]);
         onUpdate(
           List<DeviceEncryptedImageFeedSection>.unmodifiable(sections),
           false,
         );
-      }
-    }
 
-    await _resolvedImageCache.pruneToActiveImageUuids(activeImageUuids);
+        for (final _ProgressiveFeedItemRef itemRef in progressiveFeed.itemRefs) {
+          final DeviceEncryptedImageFeedItem item = await _buildFeedItem(
+            deviceApiService: progressiveFeed.deviceApiService,
+            image: itemRef.image,
+            baseUrl: source.baseUrl,
+            groupId: itemRef.groupId,
+          );
+          sections = _replaceFeedItem(
+            sections: sections,
+            sectionId: itemRef.sectionId,
+            dayIndex: itemRef.dayIndex,
+            itemIndex: itemRef.itemIndex,
+            item: item,
+          );
+          onUpdate(
+            List<DeviceEncryptedImageFeedSection>.unmodifiable(sections),
+            false,
+          );
+        }
+      }
+      didLoadAllSources = true;
+    } finally {
+      await _resolvedImageCache.pruneToActiveImageUuids(
+        activeImageUuids,
+        pruneInactiveEntries: didLoadAllSources,
+      );
+    }
 
     onUpdate(
       List<DeviceEncryptedImageFeedSection>.unmodifiable(sections),
@@ -237,6 +251,7 @@ class DeviceEncryptedImageFeedService {
 
   Future<_ProgressiveOrganizationFeed> _prepareProgressiveFeedForOrganization(
     _OrgSource source,
+    Map<String, DeviceEncryptedImageFeedItem> existingItemsByUuid,
   ) async {
     final DeviceApiService deviceApiService = DeviceApiService(
       baseUrl: source.baseUrl,
@@ -297,6 +312,22 @@ class DeviceEncryptedImageFeedService {
         final List<DeviceEncryptedImageFeedItem> items =
             <DeviceEncryptedImageFeedItem>[];
         for (final DeviceEncryptedImage image in sortedImages) {
+          final DeviceEncryptedImageFeedItem? existingItem =
+              existingItemsByUuid[image.imageUuid];
+          if (existingItem != null &&
+              (existingItem.imageBytes != null || existingItem.isCorrupt)) {
+            items.add(
+              existingItem.copyWith(
+                isLoading: false,
+                createdAt: image.createdAt,
+                baseUrl: source.baseUrl,
+                groupId: imageGroup.groupId,
+                expiresAt: image.expiresAt,
+              ),
+            );
+            continue;
+          }
+
           final int itemIndex = items.length;
           items.add(
             DeviceEncryptedImageFeedItem(
@@ -363,6 +394,21 @@ class DeviceEncryptedImageFeedService {
       return a.groupName.toLowerCase().compareTo(b.groupName.toLowerCase());
     });
     return sortedSections;
+  }
+
+  Map<String, DeviceEncryptedImageFeedItem> _indexItemsByImageUuid(
+    List<DeviceEncryptedImageFeedSection> sections,
+  ) {
+    final Map<String, DeviceEncryptedImageFeedItem> itemsByUuid =
+        <String, DeviceEncryptedImageFeedItem>{};
+    for (final DeviceEncryptedImageFeedSection section in sections) {
+      for (final DeviceEncryptedImageFeedDay day in section.days) {
+        for (final DeviceEncryptedImageFeedItem item in day.items) {
+          itemsByUuid[item.imageUuid] = item;
+        }
+      }
+    }
+    return itemsByUuid;
   }
 
   List<DeviceEncryptedImageFeedSection> _replaceFeedItem({

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:eyesonly/services/photo_expiration.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppOrganization {
@@ -75,6 +76,8 @@ class SettingsStore {
   static const String deviceServerURLsKey = 'device_server_urls';
   static const String organizationsKey = 'organizations';
   static const String onboardingCompletedKey = 'onboarding_completed';
+  static const String preferredPhotoExpirationPresetKey =
+      'preferred_photo_expiration_preset';
 
   Future<AppSettings> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -239,6 +242,29 @@ class SettingsStore {
     await prefs.setBool(onboardingCompletedKey, value);
   }
 
+  Future<PhotoExpirationSelection> loadPreferredPhotoExpirationSelection() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? persistedPresetName = prefs.getString(
+      preferredPhotoExpirationPresetKey,
+    );
+    for (final PhotoExpirationPreset preset in PhotoExpirationPreset.values) {
+      if (preset.name == persistedPresetName) {
+        return PhotoExpirationSelection(preset: preset);
+      }
+    }
+    return const PhotoExpirationSelection.defaultSelection();
+  }
+
+  Future<void> savePreferredPhotoExpirationSelection(
+    PhotoExpirationSelection selection,
+  ) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      preferredPhotoExpirationPresetKey,
+      selection.preset.name,
+    );
+  }
+
   Future<void> clearAll() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove(managerModeEnabledKey);
@@ -250,5 +276,6 @@ class SettingsStore {
     await prefs.remove(deviceServerURLsKey);
     await prefs.remove(organizationsKey);
     await prefs.remove(onboardingCompletedKey);
+    await prefs.remove(preferredPhotoExpirationPresetKey);
   }
 }

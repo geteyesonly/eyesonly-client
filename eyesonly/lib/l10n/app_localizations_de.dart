@@ -277,6 +277,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get homeLoadingImages => 'Bilder werden geladen...';
 
   @override
+  String get homeLookingForNewPhotos => 'Suche nach neuen Fotos...';
+
+  @override
+  String get homeDownloadingNewImages =>
+      'Neue Bilder werden heruntergeladen...';
+
+  @override
+  String get homeNoNewImagesFound => 'Keine neuen Bilder gefunden.';
+
+  @override
   String get homeUnknownDay => 'Unbekannter Tag';
 
   @override
@@ -307,6 +317,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get captureNoCameraAvailable =>
       'Auf diesem Gerät ist keine Kamera verfügbar.';
+
+  @override
+  String get captureFlashModeFailed =>
+      'Der Blitzmodus konnte nicht geändert werden. Bitte versuche es erneut.';
+
+  @override
+  String get captureTakePhotoFailed =>
+      'Das Foto konnte nicht aufgenommen werden. Bitte versuche es erneut.';
 
   @override
   String get pictureDeleted => 'Bild gelöscht.';
@@ -345,6 +363,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get sendSending => 'Wird gesendet...';
+
+  @override
+  String get sendFailedTryAgain =>
+      'Senden fehlgeschlagen. Bitte versuche es erneut.';
 
   @override
   String get sendSend => 'Senden';
@@ -765,6 +787,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get groupDetailLeaveAction => 'Verlassen';
 
   @override
+  String get groupDetailDeleteGroupTitle => 'Gruppe löschen?';
+
+  @override
+  String groupDetailDeleteGroupPrompt(Object groupName) {
+    return 'Möchtest du $groupName wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.';
+  }
+
+  @override
+  String get groupDetailDeleteGroupAction => 'Gruppe löschen';
+
+  @override
   String groupDetailNotificationSent(int notifiedCount) {
     return 'Benachrichtigung an $notifiedCount Geräte gesendet.';
   }
@@ -968,6 +1001,17 @@ class AppLocalizationsDe extends AppLocalizations {
       locale: localeName,
       other: 'Wird in $days Tagen gelöscht',
       one: 'Wird in 1 Tag gelöscht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String expirationInHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: 'Wird in $hours Stunden gelöscht',
+      one: 'Wird in 1 Stunde gelöscht',
     );
     return '$_temp0';
   }

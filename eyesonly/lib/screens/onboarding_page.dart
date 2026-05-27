@@ -987,9 +987,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
           const SizedBox(height: 12),
           Center(
             child: TextButton(
-              onPressed: _openAdminFlow,
-              child: Text(
-                l10n?.onboardingIAmMainManagerAction ?? 'I am a main manager',
+                onPressed: _openAdminFlow,
+                child: Text(
+                  l10n?.onboardingIAmMainManagerAction ?? 'I am a manager',
               ),
             ),
           ),

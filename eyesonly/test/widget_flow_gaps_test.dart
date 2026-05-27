@@ -88,6 +88,139 @@ void main() {
       expect(find.text('Eyes Only is locked'), findsNothing);
     });
 
+    testWidgets(
+      'unlocks after pause and hidden transitions when auth succeeds',
+      (WidgetTester tester) async {
+        final Completer<bool> authCompleter = Completer<bool>();
+
+        await tester.pumpWidget(
+          MyApp(
+            initialSettings: const AppSettings(
+              managerModeEnabled: false,
+              useBiometricLock: true,
+              pushNotificationsEnabled: true,
+              darkMode: false,
+              managerServerURL: null,
+              lastLoggedInUsername: null,
+              deviceServerURLs: <String>[],
+              organizations: <AppOrganization>[],
+            ),
+            deviceSupportChecker: () async => true,
+            deviceAuthenticator: () => authCompleter.future,
+            home: const Scaffold(body: Text('home')),
+          ),
+        );
+
+        await tester.pump();
+        expect(find.text('Unlocking...'), findsOneWidget);
+
+        authCompleter.complete(true);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Eyes Only is locked'), findsNothing);
+        expect(find.text('home'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'retries auth on resume after credential-fallback race returns false',
+      (WidgetTester tester) async {
+        // Simulates the plugin race: ERROR_CANCELED fires before onActivityPaused,
+        // so the first authenticate() call returns false while the full-screen PIN
+        // activity is still open.  When the credential activity closes and Flutter
+        // resumes, the app should automatically re-trigger auth.
+        int authCall = 0;
+        final Completer<bool> secondAuthCompleter = Completer<bool>();
+
+        await tester.pumpWidget(
+          MyApp(
+            initialSettings: const AppSettings(
+              managerModeEnabled: false,
+              useBiometricLock: true,
+              pushNotificationsEnabled: true,
+              darkMode: false,
+              managerServerURL: null,
+              lastLoggedInUsername: null,
+              deviceServerURLs: <String>[],
+              organizations: <AppOrganization>[],
+            ),
+            deviceSupportChecker: () async => true,
+            deviceAuthenticator: () {
+              authCall += 1;
+              if (authCall == 1) return Future<bool>.value(false); // race: premature failure
+              return secondAuthCompleter.future;                    // retry after resume
+            },
+            home: const Scaffold(body: Text('home')),
+          ),
+        );
+
+        // First auth call fires immediately; it returns false (race condition).
+        await tester.pump();
+        await tester.pump();
+
+        // App is locked; simulate the credential activity closing (app resumes).
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pump();
+
+        // A second auth call should have been triggered automatically.
+        expect(authCall, 2);
+        expect(find.text('Unlocking...'), findsOneWidget);
+
+        // User authenticates on the re-prompt.
+        secondAuthCompleter.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Eyes Only is locked'), findsNothing);
+        expect(find.text('home'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'does not re-trigger auth on resume when already unlocked',
+      (WidgetTester tester) async {
+        int authCalls = 0;
+
+        await tester.pumpWidget(
+          MyApp(
+            initialSettings: const AppSettings(
+              managerModeEnabled: false,
+              useBiometricLock: true,
+              pushNotificationsEnabled: true,
+              darkMode: false,
+              managerServerURL: null,
+              lastLoggedInUsername: null,
+              deviceServerURLs: <String>[],
+              organizations: <AppOrganization>[],
+            ),
+            deviceSupportChecker: () async => true,
+            deviceAuthenticator: () {
+              authCalls += 1;
+              return Future<bool>.value(true);
+            },
+            home: const Scaffold(body: Text('home')),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Eyes Only is locked'), findsNothing);
+        expect(authCalls, 1);
+
+        // App goes to background within the ignore-lifecycle window and resumes.
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pumpAndSettle();
+
+        // No additional auth call should occur.
+        expect(authCalls, 1);
+        expect(find.text('Eyes Only is locked'), findsNothing);
+      },
+    );
+
     testWidgets('shows unsupported-device message when auth is unavailable', (
       WidgetTester tester,
     ) async {

@@ -100,6 +100,9 @@
   "groupsServerTimeout": "Der Server konnte innerhalb von 10 Sekunden nicht erreicht werden.",
   "homeApiUnreachable": "API nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.",
   "homeLoadingImages": "Bilder werden geladen...",
+  "homeLookingForNewPhotos": "Suche nach neuen Fotos...",
+  "homeDownloadingNewImages": "Neue Bilder werden heruntergeladen...",
+  "homeNoNewImagesFound": "Keine neuen Bilder gefunden.",
   "homeUnknownDay": "Unbekannter Tag",
   "homeDeleteImageTitle": "Bild löschen",
   "homeDeleteImageConfirm": "Dieses Bild für diese Gruppe vom Server löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -111,6 +114,8 @@
   "failedToDecryptImage": "Bild konnte nicht entschlüsselt werden",
 
   "captureNoCameraAvailable": "Auf diesem Gerät ist keine Kamera verfügbar.",
+  "captureFlashModeFailed": "Der Blitzmodus konnte nicht geändert werden. Bitte versuche es erneut.",
+  "captureTakePhotoFailed": "Das Foto konnte nicht aufgenommen werden. Bitte versuche es erneut.",
   "pictureDeleted": "Bild gelöscht.",
   "flashAuto": "Blitz Auto",
   "flashOn": "Blitz An",
@@ -124,6 +129,7 @@
   "sendAddTextHint": "Optionalen Text für dieses Bild hinzufügen",
   "sendDelete": "Löschen",
   "sendSending": "Wird gesendet...",
+  "sendFailedTryAgain": "Senden fehlgeschlagen. Bitte versuche es erneut.",
   "sendSend": "Senden",
   "sendSelectExpirationTitle": "Löschzeitpunkt wählen",
   "close": "Schließen",
@@ -257,6 +263,9 @@
   "groupDetailLeaveGroupTitle": "Gruppe verlassen?",
   "groupDetailLeaveGroupPrompt": "Möchtest du {groupName} wirklich verlassen?\n\nNur ein Manager kann dich wieder zu dieser Gruppe hinzufügen.",
   "groupDetailLeaveAction": "Verlassen",
+  "groupDetailDeleteGroupTitle": "Gruppe löschen?",
+  "groupDetailDeleteGroupPrompt": "Möchtest du {groupName} wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+  "groupDetailDeleteGroupAction": "Gruppe löschen",
   "groupDetailNotificationSent": "Benachrichtigung an {notifiedCount} Geräte gesendet.",
   "groupDetailNotificationSentSkipped": "Benachrichtigung an {notifiedCount} Geräte gesendet. {skippedCount} wurden übersprungen.",
   "groupsRefreshTooltip": "Aktualisieren",
@@ -317,6 +326,14 @@
   "@expirationInDays": {
     "placeholders": {
       "days": {
+        "type": "int"
+      }
+    }
+  },
+  "expirationInHours": "{hours, plural, =1{Wird in 1 Stunde gelöscht} other{Wird in {hours} Stunden gelöscht}}",
+  "@expirationInHours": {
+    "placeholders": {
+      "hours": {
         "type": "int"
       }
     }

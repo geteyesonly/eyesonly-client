@@ -132,6 +132,9 @@
   "groupsServerTimeout": "Could not reach the server within 10 seconds.",
   "homeApiUnreachable": "Could not reach the API. Please check your connection and try again.",
   "homeLoadingImages": "Loading images...",
+  "homeLookingForNewPhotos": "Looking for new photos...",
+  "homeDownloadingNewImages": "Downloading new images...",
+  "homeNoNewImagesFound": "No new images found.",
   "homeUnknownDay": "Unknown day",
   "homeDeleteImageTitle": "Delete Image",
   "homeDeleteImageConfirm": "Delete this image from the server for this group? This action cannot be undone.",
@@ -143,6 +146,8 @@
   "failedToDecryptImage": "Failed to decrypt image",
 
   "captureNoCameraAvailable": "No camera is available on this device.",
+  "captureFlashModeFailed": "Could not change flash mode. Please try again.",
+  "captureTakePhotoFailed": "Could not take photo. Please try again.",
   "pictureDeleted": "Picture deleted.",
   "flashAuto": "Flash Auto",
   "flashOn": "Flash On",
@@ -163,6 +168,7 @@
   "sendAddTextHint": "Add optional text for this image",
   "sendDelete": "Delete",
   "sendSending": "Sending...",
+  "sendFailedTryAgain": "Sending failed. Please try again.",
   "sendSend": "Send",
   "sendSelectExpirationTitle": "Select deletion time",
   "close": "Close",
@@ -329,6 +335,14 @@
     }
   },
   "groupDetailLeaveAction": "Leave",
+  "groupDetailDeleteGroupTitle": "Delete Group?",
+  "groupDetailDeleteGroupPrompt": "Do you really want to delete {groupName}?\n\nThis action cannot be undone.",
+  "@groupDetailDeleteGroupPrompt": {
+    "placeholders": {
+      "groupName": {}
+    }
+  },
+  "groupDetailDeleteGroupAction": "Delete Group",
   "groupDetailNotificationSent": "Notification sent to {notifiedCount} devices.",
   "@groupDetailNotificationSent": {
     "placeholders": {
@@ -391,7 +405,7 @@
       "installationId": {}
     }
   },
-  "onboardingIAmMainManagerAction": "I am a main manager",
+  "onboardingIAmMainManagerAction": "I am a manager",
   "onboardingBackAction": "Back",
   "onboardingStep3Title": "Step 3: Push notifications",
   "onboardingStep3Body": "Do you want to receive push notifications for new group images?",
@@ -423,6 +437,14 @@
   "@expirationInDays": {
     "placeholders": {
       "days": {
+        "type": "int"
+      }
+    }
+  },
+  "expirationInHours": "{hours, plural, =1{Will be deleted in 1 hour} other{Will be deleted in {hours} hours}}",
+  "@expirationInHours": {
+    "placeholders": {
+      "hours": {
         "type": "int"
       }
     }

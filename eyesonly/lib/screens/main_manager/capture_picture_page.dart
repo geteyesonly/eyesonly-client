@@ -10,6 +10,7 @@ import 'package:eyesonly/screens/main_manager/send_captured_picture_page.dart';
 import 'package:eyesonly/services/jpeg_privacy.dart';
 import 'package:eyesonly/services/photo_expiration.dart';
 import 'package:eyesonly/services/screen_feedback.dart';
+import 'package:eyesonly/services/settings_store.dart';
 
 class CapturePicturePage extends StatefulWidget {
   const CapturePicturePage({
@@ -32,22 +33,46 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
   CameraController? _cameraController;
   bool _isInitializingCamera = true;
   bool _isCapturing = false;
+  bool _isZooming = false;
   String? _cameraErrorMessage;
   CameraLensDirection _activeLensDirection = CameraLensDirection.back;
   FlashMode _flashMode = FlashMode.off;
   Offset? _focusIndicatorPosition;
+  double _minZoomLevel = 1.0;
+  double _maxZoomLevel = 1.0;
+  double _currentZoomLevel = 1.0;
+  double _baseZoomLevel = 1.0;
+  bool _isApplyingZoomLevel = false;
+  double? _pendingZoomLevel;
+  final SettingsStore _settingsStore = SettingsStore();
   PhotoExpirationSelection _sessionExpirationSelection =
       const PhotoExpirationSelection.defaultSelection();
 
   @override
   void initState() {
     super.initState();
+    _loadPreferredExpirationSelection();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
       _initializeCamera();
     });
+  }
+
+  Future<void> _loadPreferredExpirationSelection() async {
+    try {
+      final PhotoExpirationSelection savedSelection =
+          await _settingsStore.loadPreferredPhotoExpirationSelection();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _sessionExpirationSelection = savedSelection;
+      });
+    } catch (_) {
+      // Keep the default if persisted preferences cannot be loaded.
+    }
   }
 
   Future<void> _initializeCamera() async {
@@ -98,6 +123,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     );
     await controller.initialize();
     await controller.setFlashMode(_flashMode);
+    await _initializeZoomBounds(controller);
 
     if (!mounted) {
       await controller.dispose();
@@ -109,6 +135,83 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       _activeLensDirection = camera.lensDirection;
       _isInitializingCamera = false;
     });
+  }
+
+  Future<void> _initializeZoomBounds(CameraController controller) async {
+    final double minZoom = await controller.getMinZoomLevel();
+    final double maxZoom = await controller.getMaxZoomLevel();
+    final double initialZoom = _currentZoomLevel.clamp(minZoom, maxZoom);
+
+    await controller.setZoomLevel(initialZoom);
+
+    _minZoomLevel = minZoom;
+    _maxZoomLevel = maxZoom;
+    _currentZoomLevel = initialZoom;
+    _baseZoomLevel = initialZoom;
+  }
+
+  void _onScaleStart(ScaleStartDetails details) {
+    final bool isPinching = details.pointerCount > 1;
+    if (_isZooming != isPinching && mounted) {
+      setState(() {
+        _isZooming = isPinching;
+      });
+    } else {
+      _isZooming = isPinching;
+    }
+    _baseZoomLevel = _currentZoomLevel;
+  }
+
+  void _onScaleUpdate(
+    ScaleUpdateDetails details,
+    CameraController controller,
+  ) {
+    if (details.pointerCount < 2) {
+      return;
+    }
+
+    if (!_isZooming && mounted) {
+      setState(() {
+        _isZooming = true;
+      });
+    } else {
+      _isZooming = true;
+    }
+    final double nextZoomLevel = (_baseZoomLevel * details.scale).clamp(
+      _minZoomLevel,
+      _maxZoomLevel,
+    );
+    _applyZoomLevel(controller, nextZoomLevel);
+  }
+
+  Future<void> _applyZoomLevel(
+    CameraController controller,
+    double zoomLevel,
+  ) async {
+    _pendingZoomLevel = zoomLevel;
+    if (_isApplyingZoomLevel) {
+      return;
+    }
+
+    _isApplyingZoomLevel = true;
+    while (_pendingZoomLevel != null) {
+      final double targetZoomLevel = _pendingZoomLevel!;
+      _pendingZoomLevel = null;
+
+      try {
+        await controller.setZoomLevel(targetZoomLevel);
+        if (!mounted) {
+          _currentZoomLevel = targetZoomLevel;
+        } else {
+          setState(() {
+            _currentZoomLevel = targetZoomLevel;
+          });
+        }
+      } catch (_) {
+        // Ignore unsupported zoom updates from transient camera states.
+      }
+    }
+    _isApplyingZoomLevel = false;
   }
 
   Future<void> _switchCamera() async {
@@ -161,7 +264,11 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       if (!mounted) {
         return;
       }
-      ScreenFeedback.showError(context, error);
+      ScreenFeedback.showError(
+        context,
+        error,
+        fallbackMessage: AppLocalizations.of(context)!.captureFlashModeFailed,
+      );
     }
   }
 
@@ -233,6 +340,9 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
 
       if (result != null) {
         _sessionExpirationSelection = result.expirationSelection;
+        await _settingsStore.savePreferredPhotoExpirationSelection(
+          _sessionExpirationSelection,
+        );
       }
 
       if (result?.shouldDelete == true && mounted) {
@@ -245,7 +355,11 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       if (!mounted) {
         return;
       }
-      ScreenFeedback.showError(context, error);
+      ScreenFeedback.showError(
+        context,
+        error,
+        fallbackMessage: AppLocalizations.of(context)!.captureTakePhotoFailed,
+      );
     } finally {
       if (captureOrientationLocked) {
         try {
@@ -305,6 +419,17 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
 
     return GestureDetector(
       onTapUp: (TapUpDetails details) => _onPreviewTap(details, controller),
+      onScaleStart: _onScaleStart,
+      onScaleUpdate: (ScaleUpdateDetails details) =>
+          _onScaleUpdate(details, controller),
+      onScaleEnd: (_) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _isZooming = false;
+        });
+      },
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -329,6 +454,36 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
                 ),
               ),
             ),
+          Positioned(
+            top: 24,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: _isZooming ? 1 : 0,
+                  duration: const Duration(milliseconds: 150),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_currentZoomLevel.toStringAsFixed(1)}x',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -338,7 +493,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     TapUpDetails details,
     CameraController controller,
   ) async {
-    if (!controller.value.isInitialized) return;
+    if (!controller.value.isInitialized || _isZooming) return;
 
     final RenderBox? box = context.findRenderObject() as RenderBox?;
     if (box == null) return;

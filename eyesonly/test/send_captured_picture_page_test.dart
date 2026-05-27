@@ -162,7 +162,7 @@ void main() {
       await tester.tap(find.text('1 day'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Will be deleted in 1 day'), findsOneWidget);
+      expect(find.text('Will be deleted in 24 hours'), findsOneWidget);
     });
 
     testWidgets('selects 7-day expiration', (WidgetTester tester) async {
@@ -210,7 +210,7 @@ void main() {
       await tester.tap(find.text('1 day'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Will be deleted in 1 day'), findsOneWidget);
+      expect(find.text('Will be deleted in 24 hours'), findsOneWidget);
 
       // Delete and verify selection is still 1 day for next send
       await tester.tap(find.text('Delete'));
@@ -294,5 +294,37 @@ void main() {
       },
       skip: 'No-expiration preset not yet implemented.',
     );
+  });
+
+  group('formatPhotoExpirationText', () {
+    test('uses hour text when less than one day remains', () {
+      final DateTime now = DateTime(2026, 5, 11, 10, 0, 0);
+      final DateTime expiresAt = now.add(const Duration(hours: 5, minutes: 1));
+
+      final String text = formatPhotoExpirationText(
+        expiresAt,
+        now: now,
+        expiresInDaysTextBuilder: (int days) => 'D:$days',
+        expiresInHoursTextBuilder: (int hours) => 'H:$hours',
+        expiredText: 'X',
+      );
+
+      expect(text, 'H:6');
+    });
+
+    test('uses day text when one day or more remains', () {
+      final DateTime now = DateTime(2026, 5, 11, 10, 0, 0);
+      final DateTime expiresAt = now.add(const Duration(days: 1));
+
+      final String text = formatPhotoExpirationText(
+        expiresAt,
+        now: now,
+        expiresInDaysTextBuilder: (int days) => 'D:$days',
+        expiresInHoursTextBuilder: (int hours) => 'H:$hours',
+        expiredText: 'X',
+      );
+
+      expect(text, 'D:1');
+    });
   });
 }

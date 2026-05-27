@@ -62,7 +62,6 @@ class PushNotificationsService {
         );
 
     FirebaseMessaging.onMessage.listen(processIncomingRemoteMessage);
-    FirebaseMessaging.onMessageOpenedApp.listen(processIncomingRemoteMessage);
   }
 
   Future<void> enableForOrganizations({

@@ -13,12 +13,16 @@ import 'package:eyesonly/services/manager/group_notification_service.dart';
 import 'package:eyesonly/services/photo_expiration.dart';
 import 'package:eyesonly/services/screen_feedback.dart';
 import 'package:eyesonly/services/settings_store.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:eyesonly/l10n/app_localizations.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 typedef DeviceMembershipChecker =
     Future<bool?> Function(List<String> deviceServerUrls);
+typedef HomeConnectivityChecker =
+  Future<bool> Function(List<String> deviceServerUrls);
 typedef GroupsPageBuilder = Widget Function(BuildContext context);
 typedef AddOrganizationPageBuilder = Widget Function(BuildContext context);
 typedef CaptureGroupPageBuilder =
@@ -35,6 +39,9 @@ class MyHomePage extends StatefulWidget {
     this.groupsPageBuilder,
     this.addOrganizationPageBuilder,
     this.captureGroupPageBuilder,
+    this.unlockEvents,
+    this.deferStartupImageCheckFeedbackUntilUnlock = false,
+    this.connectivityChecker,
   });
 
   final String title;
@@ -45,12 +52,19 @@ class MyHomePage extends StatefulWidget {
   final GroupsPageBuilder? groupsPageBuilder;
   final AddOrganizationPageBuilder? addOrganizationPageBuilder;
   final CaptureGroupPageBuilder? captureGroupPageBuilder;
+  final ValueListenable<int>? unlockEvents;
+  final bool deferStartupImageCheckFeedbackUntilUnlock;
+  final HomeConnectivityChecker? connectivityChecker;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage>
+  with WidgetsBindingObserver {
+  static const String _offlineSnackbarMessage = 'You are offline.';
+  static const Duration _noNewImagesMessageCooldown = Duration(minutes: 60);
+
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   late final SettingsStore _settingsStore;
@@ -65,6 +79,13 @@ class _MyHomePageState extends State<MyHomePage> {
       <DeviceEncryptedImageFeedSection>[];
   String? _imageErrorMessage;
   int _imageLoadGeneration = 0;
+  bool _hasShownStartupImageCheckFeedback = false;
+  bool _isImageCheckFeedbackInProgress = false;
+  bool _wasInBackground = false;
+  bool _pendingStartupFeedbackAfterUnlock = false;
+  int _initialUnlockEventValue = 0;
+  DateTime? _lastNoNewImagesMessageAt;
+  bool? _lastKnownOnline;
 
   bool get _canTakePictures =>
       _managerModeEnabled &&
@@ -74,10 +95,71 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initialUnlockEventValue = widget.unlockEvents?.value ?? 0;
+    widget.unlockEvents?.addListener(_onUnlockEvent);
     _settingsStore = widget.settingsStore ?? SettingsStore();
     _imageFeedService =
         widget.imageFeedService ?? DeviceEncryptedImageFeedService();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    widget.unlockEvents?.removeListener(_onUnlockEvent);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _onUnlockEvent() {
+    _triggerPendingStartupFeedbackAfterUnlock();
+  }
+
+  bool _didUnlockSinceHomeInit() {
+    final ValueListenable<int>? unlockEvents = widget.unlockEvents;
+    if (unlockEvents == null) {
+      return false;
+    }
+    return unlockEvents.value > _initialUnlockEventValue;
+  }
+
+  void _triggerPendingStartupFeedbackAfterUnlock() {
+    if (!_pendingStartupFeedbackAfterUnlock ||
+        !_didUnlockSinceHomeInit() ||
+        _isCheckingGroupMembership ||
+        _isLoadingImages ||
+        _isImageCheckFeedbackInProgress) {
+      return;
+    }
+
+    _pendingStartupFeedbackAfterUnlock = false;
+    _hasShownStartupImageCheckFeedback = true;
+  }
+
+  Future<void> _handleManualRefresh() async {
+    await _loadSettings(
+      enableStartupImageCheckFeedback: false,
+      showOfflineFeedback: false,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _wasInBackground = true;
+        break;
+      case AppLifecycleState.inactive:
+        break;
+      case AppLifecycleState.resumed:
+        if (_wasInBackground) {
+          _wasInBackground = false;
+          _refreshImagesWithFeedbackIfReady();
+        }
+        break;
+    }
   }
 
   Future<bool?> _checkDeviceGroupMembership(
@@ -122,7 +204,10 @@ class _MyHomePageState extends State<MyHomePage> {
     return null;
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> _loadSettings({
+    bool enableStartupImageCheckFeedback = true,
+    bool showOfflineFeedback = true,
+  }) async {
     final int loadGeneration = ++_imageLoadGeneration;
     if (mounted) {
       setState(() {
@@ -156,7 +241,29 @@ class _MyHomePageState extends State<MyHomePage> {
       });
 
       if (settings.deviceServerURLs.isNotEmpty) {
-        await _loadEncryptedImages(settings, loadGeneration);
+        if (enableStartupImageCheckFeedback &&
+            !_hasShownStartupImageCheckFeedback &&
+            isInGroup == true) {
+          if (widget.deferStartupImageCheckFeedbackUntilUnlock &&
+              !_didUnlockSinceHomeInit()) {
+            _pendingStartupFeedbackAfterUnlock = true;
+            await _loadEncryptedImages(settings, loadGeneration);
+          } else {
+            _hasShownStartupImageCheckFeedback = true;
+            await _runImageCheckFeedback(
+              settings: settings,
+              loadGeneration: loadGeneration,
+              showProgressMessage: false,
+              allowNoNewMessage: false,
+            );
+          }
+        } else {
+          await _loadEncryptedImages(settings, loadGeneration);
+        }
+
+        if (showOfflineFeedback) {
+          await _showOfflineMessageIfNeeded(settings, isManualAction: false);
+        }
       }
     } catch (_) {
       if (!mounted) {
@@ -181,6 +288,7 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       await _imageFeedService.loadFeedProgressively(
         settings: settings,
+        existingSections: _imageSections,
         onUpdate:
             (List<DeviceEncryptedImageFeedSection> sections, bool isComplete) {
               if (!mounted || loadGeneration != _imageLoadGeneration) {
@@ -210,7 +318,234 @@ class _MyHomePageState extends State<MyHomePage> {
         _isLoadingImages = false;
         _imageErrorMessage = error.toString();
       });
+    } finally {
+      _triggerPendingStartupFeedbackAfterUnlock();
     }
+  }
+
+  Set<String> _collectImageUuids(
+    List<DeviceEncryptedImageFeedSection> sections,
+  ) {
+    final Set<String> imageUuids = <String>{};
+    for (final DeviceEncryptedImageFeedSection section in sections) {
+      for (final DeviceEncryptedImageFeedDay day in section.days) {
+        for (final DeviceEncryptedImageFeedItem item in day.items) {
+          imageUuids.add(item.imageUuid);
+        }
+      }
+    }
+    return imageUuids;
+  }
+
+  void _showImageCheckMessage(String message, {Duration? duration}) {
+    if (!mounted) {
+      return;
+    }
+
+    final ScaffoldMessengerState? messenger = ScaffoldMessenger.maybeOf(
+      context,
+    );
+    if (messenger == null) {
+      return;
+    }
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          duration: duration ?? const Duration(seconds: 2),
+        ),
+      );
+  }
+
+  bool _isReadyForImageRefresh(AppSettings settings) {
+    return settings.deviceServerURLs.isNotEmpty &&
+        _isInGroup == true &&
+        !_isCheckingGroupMembership;
+  }
+
+  Future<void> _runImageCheckFeedback({
+    required AppSettings settings,
+    required int loadGeneration,
+    required bool showProgressMessage,
+    required bool allowNoNewMessage,
+  }) async {
+    final Set<String> beforeImageUuids = _collectImageUuids(_imageSections);
+    if (showProgressMessage) {
+      _showImageCheckMessage(_l10n.homeLookingForNewPhotos);
+    }
+
+    await _loadEncryptedImages(settings, loadGeneration);
+    if (!mounted || loadGeneration != _imageLoadGeneration) {
+      return;
+    }
+
+    if (_imageErrorMessage != null) {
+      return;
+    }
+
+    final Set<String> afterImageUuids = _collectImageUuids(_imageSections);
+    final bool hasNewImages = afterImageUuids.difference(beforeImageUuids).isNotEmpty;
+    if (hasNewImages) {
+      _showImageCheckMessage(_l10n.homeDownloadingNewImages);
+      return;
+    }
+
+    if (allowNoNewMessage && _canShowNoNewImagesMessage()) {
+      _showImageCheckMessage(_l10n.homeNoNewImagesFound);
+    }
+  }
+
+  Future<void> _refreshImagesWithFeedbackIfReady({
+    bool showOfflineMessage = true,
+    bool isManualAction = false,
+    bool showProgressMessage = false,
+    bool allowNoNewMessage = false,
+  }) async {
+    if (_isImageCheckFeedbackInProgress ||
+        _isCheckingGroupMembership ||
+        _isLoadingImages) {
+      return;
+    }
+
+    _isImageCheckFeedbackInProgress = true;
+    try {
+      final AppSettings settings = await _settingsStore.load();
+      if (!mounted || settings.deviceServerURLs.isEmpty) {
+        return;
+      }
+
+      final bool hasConnection = await _hasConnectionForDeviceServers(
+        settings.deviceServerURLs,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (!hasConnection) {
+        if (_shouldShowOfflineMessage(
+          hasConnection: false,
+          isManualAction: isManualAction,
+          allowOfflineMessage: showOfflineMessage,
+        )) {
+          _showImageCheckMessage(_offlineSnackbarMessage);
+        }
+        return;
+      }
+
+      _lastKnownOnline = true;
+
+      if (!_isReadyForImageRefresh(settings)) {
+        return;
+      }
+
+      final int loadGeneration = ++_imageLoadGeneration;
+      if (mounted) {
+        setState(() {
+          _isLoadingImages = true;
+          _imageErrorMessage = null;
+        });
+      }
+
+      await _runImageCheckFeedback(
+        settings: settings,
+        loadGeneration: loadGeneration,
+        showProgressMessage: showProgressMessage,
+        allowNoNewMessage: allowNoNewMessage,
+      );
+    } finally {
+      _isImageCheckFeedbackInProgress = false;
+    }
+  }
+
+  bool _canShowNoNewImagesMessage() {
+    final DateTime now = DateTime.now();
+    final DateTime? lastShownAt = _lastNoNewImagesMessageAt;
+    if (lastShownAt != null &&
+        now.difference(lastShownAt) < _noNewImagesMessageCooldown) {
+      return false;
+    }
+
+    _lastNoNewImagesMessageAt = now;
+    return true;
+  }
+
+  bool _shouldShowOfflineMessage({
+    required bool hasConnection,
+    required bool isManualAction,
+    required bool allowOfflineMessage,
+  }) {
+    final bool? previousOnline = _lastKnownOnline;
+    _lastKnownOnline = hasConnection;
+
+    if (!allowOfflineMessage || hasConnection) {
+      return false;
+    }
+
+    if (isManualAction) {
+      return true;
+    }
+
+    return previousOnline != false;
+  }
+
+  Future<void> _showOfflineMessageIfNeeded(
+    AppSettings settings, {
+    required bool isManualAction,
+  }) async {
+    if (settings.deviceServerURLs.isEmpty) {
+      return;
+    }
+
+    final bool hasConnection = await _hasConnectionForDeviceServers(
+      settings.deviceServerURLs,
+    );
+    if (!mounted || hasConnection) {
+      if (hasConnection) {
+        _lastKnownOnline = true;
+      }
+      return;
+    }
+
+    if (_shouldShowOfflineMessage(
+      hasConnection: false,
+      isManualAction: isManualAction,
+      allowOfflineMessage: true,
+    )) {
+      _showImageCheckMessage(_offlineSnackbarMessage);
+    }
+  }
+
+  Future<bool> _hasConnectionForDeviceServers(
+    List<String> deviceServerUrls,
+  ) async {
+    final HomeConnectivityChecker? connectivityChecker =
+        widget.connectivityChecker;
+    if (connectivityChecker != null) {
+      return connectivityChecker(deviceServerUrls);
+    }
+
+    if (deviceServerUrls.isEmpty) {
+      return false;
+    }
+
+    for (final String baseUrl in deviceServerUrls) {
+      final String normalizedUrl = baseUrl.trim();
+      if (normalizedUrl.isEmpty) {
+        continue;
+      }
+
+      try {
+        final Uri uri = Uri.parse(normalizedUrl);
+        await http.get(uri).timeout(const Duration(seconds: 5));
+        return true;
+      } catch (_) {
+        // Try next configured server.
+      }
+    }
+
+    return false;
   }
 
   Future<void> _openCaptureGroupSelection() async {
@@ -225,6 +560,18 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
+    final bool hasConnection = await _hasConnectionForCapture(baseUrl);
+    if (!mounted) {
+      return;
+    }
+    if (!hasConnection) {
+      ScreenFeedback.showMessage(
+        context,
+        'No internet connection. Please connect and try again.',
+      );
+      return;
+    }
+
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
@@ -233,6 +580,25 @@ class _MyHomePageState extends State<MyHomePage> {
             SelectCaptureGroupPage(baseUrl: baseUrl),
       ),
     );
+
+    if (!mounted) {
+      return;
+    }
+    await _loadSettings(
+      enableStartupImageCheckFeedback: false,
+      showOfflineFeedback: false,
+    );
+    await _refreshImagesWithFeedbackIfReady();
+  }
+
+  Future<bool> _hasConnectionForCapture(String baseUrl) async {
+    try {
+      final Uri uri = Uri.parse(baseUrl);
+      await http.get(uri).timeout(const Duration(seconds: 5));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _openGroups() async {
@@ -284,7 +650,11 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!mounted) {
       return;
     }
-    await _loadSettings();
+    await _loadSettings(
+      enableStartupImageCheckFeedback: false,
+      showOfflineFeedback: false,
+    );
+    await _refreshImagesWithFeedbackIfReady();
   }
 
   bool get _canSendGroupNotifications => _canTakePictures;
@@ -465,7 +835,13 @@ class _MyHomePageState extends State<MyHomePage> {
                       builder: (context) =>
                           AccountPage(username: _lastLoggedInUsername),
                     ),
-                  ).then((_) => _loadSettings());
+                  ).then((_) async {
+                    await _loadSettings(
+                      enableStartupImageCheckFeedback: false,
+                      showOfflineFeedback: false,
+                    );
+                    await _refreshImagesWithFeedbackIfReady();
+                  });
                 },
               ),
             if (_managerModeEnabled &&
@@ -481,7 +857,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     MaterialPageRoute<void>(
                       builder: (context) => const LoginPage(),
                     ),
-                  ).then((_) => _loadSettings());
+                  ).then((_) async {
+                    await _loadSettings(
+                      enableStartupImageCheckFeedback: false,
+                      showOfflineFeedback: false,
+                    );
+                    await _refreshImagesWithFeedbackIfReady();
+                  });
                 },
               ),
             ListTile(
@@ -494,9 +876,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   MaterialPageRoute<void>(
                     builder: (context) => const SettingsPage(),
                   ),
-                ).then((_) {
+                ).then((_) async {
                   widget.onSettingsChanged?.call();
-                  _loadSettings();
+                  await _loadSettings(
+                    enableStartupImageCheckFeedback: false,
+                    showOfflineFeedback: false,
+                  );
+                  await _refreshImagesWithFeedbackIfReady();
                 });
               },
             ),
@@ -524,13 +910,16 @@ class _MyHomePageState extends State<MyHomePage> {
             )
           : null,
       body: RefreshIndicator(
-        onRefresh: _loadSettings,
+        onRefresh: _handleManualRefresh,
         child: _buildBody(context),
       ),
     );
   }
 
   Widget _buildBody(BuildContext context) {
+    final bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     if (_isCheckingGroupMembership) {
       return _buildCenteredScrollable(
         context,
@@ -580,8 +969,8 @@ class _MyHomePageState extends State<MyHomePage> {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isLandscape ? 4 : 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                   childAspectRatio: 3 / 4,
@@ -724,6 +1113,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildImageLoadingPlaceholder(BuildContext context) {
+    final bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -735,8 +1127,8 @@ class _MyHomePageState extends State<MyHomePage> {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: isLandscape ? 4 : 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
             childAspectRatio: 3 / 4,
@@ -868,6 +1260,7 @@ class _EncryptedImageCard extends StatelessWidget {
                 formatPhotoExpirationText(
                   item.expiresAt!,
                   expiresInDaysTextBuilder: l10n.expirationInDays,
+                  expiresInHoursTextBuilder: l10n.expirationInHours,
                   expiredText: l10n.expirationExpired,
                 ),
                 style: TextStyle(

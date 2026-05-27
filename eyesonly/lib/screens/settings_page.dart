@@ -42,6 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final PushNotificationsService _pushNotificationsService;
   String? _managerServerURL;
   bool _managerModeEnabled = AppSettings.defaults.managerModeEnabled;
+  // ignore: unused_field
   bool _useBiometricLock = AppSettings.defaults.useBiometricLock;
   bool _darkMode = AppSettings.defaults.darkMode;
   bool _pushNotificationsEnabled = AppSettings.defaults.pushNotificationsEnabled;
@@ -149,6 +150,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await _settingsStore.saveManagerServerURL(value);
   }
 
+  // ignore: unused_element
   Future<void> _setBiometricLock(bool value) async {
     if (!value) {
       setState(() {
@@ -390,14 +392,17 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
             child: Text(l10n.settingsGeneral, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
-          SwitchListTile(
-            title: Text(l10n.settingsDeviceLock),
-            subtitle: Text(l10n.settingsDeviceLockSubtitle),
-            value: _useBiometricLock,
-            onChanged: (value) async {
-              await _setBiometricLock(value);
-            },
-          ),
+          // Biometric lock setting is intentionally hidden for now.
+          // We currently require biometric lock by default and may re-enable
+          // this toggle once per-user configurability is needed again.
+          // SwitchListTile(
+          //   title: Text(l10n.settingsDeviceLock),
+          //   subtitle: Text(l10n.settingsDeviceLockSubtitle),
+          //   value: _useBiometricLock,
+          //   onChanged: (value) async {
+          //     await _setBiometricLock(value);
+          //   },
+          // ),
           SwitchListTile(
             title: Text(l10n.settingsPushNotifications),
             subtitle: Text(l10n.settingsPushNotificationsSubtitle),

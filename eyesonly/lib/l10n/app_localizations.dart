@@ -566,6 +566,24 @@ abstract class AppLocalizations {
   /// **'Loading images...'**
   String get homeLoadingImages;
 
+  /// No description provided for @homeLookingForNewPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for new photos...'**
+  String get homeLookingForNewPhotos;
+
+  /// No description provided for @homeDownloadingNewImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading new images...'**
+  String get homeDownloadingNewImages;
+
+  /// No description provided for @homeNoNewImagesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No new images found.'**
+  String get homeNoNewImagesFound;
+
   /// No description provided for @homeUnknownDay.
   ///
   /// In en, this message translates to:
@@ -625,6 +643,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No camera is available on this device.'**
   String get captureNoCameraAvailable;
+
+  /// No description provided for @captureFlashModeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not change flash mode. Please try again.'**
+  String get captureFlashModeFailed;
+
+  /// No description provided for @captureTakePhotoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not take photo. Please try again.'**
+  String get captureTakePhotoFailed;
 
   /// No description provided for @pictureDeleted.
   ///
@@ -697,6 +727,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sending...'**
   String get sendSending;
+
+  /// No description provided for @sendFailedTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending failed. Please try again.'**
+  String get sendFailedTryAgain;
 
   /// No description provided for @sendSend.
   ///
@@ -1430,6 +1466,24 @@ abstract class AppLocalizations {
   /// **'Leave'**
   String get groupDetailLeaveAction;
 
+  /// No description provided for @groupDetailDeleteGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Group?'**
+  String get groupDetailDeleteGroupTitle;
+
+  /// No description provided for @groupDetailDeleteGroupPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you really want to delete {groupName}?\n\nThis action cannot be undone.'**
+  String groupDetailDeleteGroupPrompt(Object groupName);
+
+  /// No description provided for @groupDetailDeleteGroupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Group'**
+  String get groupDetailDeleteGroupAction;
+
   /// No description provided for @groupDetailNotificationSent.
   ///
   /// In en, this message translates to:
@@ -1628,7 +1682,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingIAmMainManagerAction.
   ///
   /// In en, this message translates to:
-  /// **'I am a main manager'**
+  /// **'I am a manager'**
   String get onboardingIAmMainManagerAction;
 
   /// No description provided for @onboardingBackAction.
@@ -1762,6 +1816,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{days, plural, =1{Will be deleted in 1 day} other{Will be deleted in {days} days}}'**
   String expirationInDays(int days);
+
+  /// No description provided for @expirationInHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours, plural, =1{Will be deleted in 1 hour} other{Will be deleted in {hours} hours}}'**
+  String expirationInHours(int hours);
 }
 
 class _AppLocalizationsDelegate

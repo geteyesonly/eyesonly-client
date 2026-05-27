@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/screens/main_manager/capture_picture_page.dart';
+import 'package:eyesonly/screens/main_manager/login_page.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/group_display_service.dart';
 import 'package:eyesonly/services/manager/api_service.dart';
@@ -46,6 +47,27 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
   List<_CaptureGroupEntry> _groups = <_CaptureGroupEntry>[];
 
   AppLocalizations? get _l10n => AppLocalizations.of(context);
+
+  bool _isSessionExpiredError(ApiException error) {
+    final String message = error.message.trim().toLowerCase();
+    return error.statusCode == 401 ||
+        message.contains('session has expired') ||
+        message.contains('please log in again') ||
+        message.contains('could not be authenticated with this server');
+  }
+
+  Future<void> _redirectToLoginForExpiredSession() async {
+    await _settingsStore.saveLastLoggedInUsername(null);
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const LoginPage(),
+      ),
+      (Route<dynamic> route) => route.isFirst,
+    );
+  }
 
   @override
   void initState() {
@@ -129,6 +151,10 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
         if (mounted) Navigator.of(context).pop();
       }
     } on ApiException catch (error) {
+      if (_isSessionExpiredError(error)) {
+        await _redirectToLoginForExpiredSession();
+        return;
+      }
       if (!mounted) {
         return;
       }

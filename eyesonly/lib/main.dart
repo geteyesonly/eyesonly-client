@@ -70,6 +70,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final LocalAuthentication _localAuthentication = LocalAuthentication();
+  final ValueNotifier<int> _unlockEvents = ValueNotifier<int>(0);
   late final SettingsStore _settingsStore;
   late AppSettings _currentSettings;
   late bool _darkMode;
@@ -100,6 +101,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _unlockEvents.dispose();
     _removeScreenCaptureMonitoring();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -164,6 +166,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
       return;
     }
+
+    // When the app returns to the foreground while locked, re-trigger auth
+    // automatically. This handles the device-credential fallback race in the
+    // local_auth Android plugin: BiometricPrompt.ERROR_CANCELED can fire before
+    // onActivityPaused sets activityPaused=true, causing authenticate() to
+    // return false while the full-screen PIN activity is still open. When the
+    // credential activity closes and Flutter resumes, we detect the locked state
+    // and retry so the user is not permanently stuck on the lock screen.
+    if (state == AppLifecycleState.resumed && _isLocked && !shouldIgnoreLifecycleEvent) {
+      _unlockApp();
+    }
   }
 
   Future<void> _reloadAppSettings() async {
@@ -221,7 +234,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           await (widget.deviceAuthenticator?.call() ??
               _localAuthentication.authenticate(
                 localizedReason: l10n?.unlockReason ?? 'Unlock',
-                options: const AuthenticationOptions(),
+                options: const AuthenticationOptions(
+                  stickyAuth: true,
+                ),
               ));
 
       if (!mounted) {
@@ -233,6 +248,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _lockMessage = didAuthenticate ? null : l10n?.lockUnlockRequired ?? 'Unlock required.';
       });
       if (didAuthenticate) {
+        _unlockEvents.value = _unlockEvents.value + 1;
         _ignoreLifecycleUntil = DateTime.now().add(const Duration(seconds: 10));
       }
     } on PlatformException catch (error) {
@@ -308,6 +324,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ? MyHomePage(
                       title: AppLocalizations.of(context)!.appTitle,
                       onSettingsChanged: _reloadAppSettings,
+                      unlockEvents: _unlockEvents,
+                      deferStartupImageCheckFeedbackUntilUnlock:
+                          _useBiometricLock,
                     )
                   : OnboardingPage(
                       initialSettings: _currentSettings,

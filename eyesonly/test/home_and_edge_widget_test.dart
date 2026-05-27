@@ -192,6 +192,149 @@ void main() {
       expect(find.text('Failed to decrypt image'), findsOneWidget);
     });
 
+    testWidgets('manual refresh reloads the feed once', (
+      WidgetTester tester,
+    ) async {
+      int loadCount = 0;
+
+      await tester.pumpWidget(
+        buildTestApp(
+          MyHomePage(
+            title: 'Eyes Only',
+            settingsStore: FakeSettingsStore(
+              const AppSettings(
+                managerModeEnabled: false,
+                useBiometricLock: false,
+                darkMode: false,
+                pushNotificationsEnabled: false,
+                managerServerURL: null,
+                lastLoggedInUsername: null,
+                deviceServerURLs: <String>['http://org'],
+                organizations: <AppOrganization>[
+                  AppOrganization(id: 'org-1', name: 'Org', apiUrl: 'http://org'),
+                ],
+              ),
+            ),
+            membershipChecker: (_) async => true,
+            imageFeedService: FakeImageFeedService(
+              onLoad: ({required settings, required onUpdate}) async {
+                loadCount++;
+                onUpdate(
+                  <DeviceEncryptedImageFeedSection>[
+                    DeviceEncryptedImageFeedSection(
+                      sectionId: 's1',
+                      organizationName: 'Org',
+                      groupId: 'group-1',
+                      groupName: 'Alpha',
+                      days: <DeviceEncryptedImageFeedDay>[
+                        DeviceEncryptedImageFeedDay(
+                          day: DateTime.utc(2026, 5, 4),
+                          items: <DeviceEncryptedImageFeedItem>[
+                            DeviceEncryptedImageFeedItem(
+                              imageUuid: 'img-1',
+                              isCorrupt: false,
+                              isLoading: false,
+                              imageBytes: _transparentImageBytes,
+                              baseUrl: 'http://org',
+                              groupId: 'group-1',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                  true,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(loadCount, 1);
+
+      final RefreshIndicator refreshIndicator = tester.widget(
+        find.byType(RefreshIndicator),
+      );
+      await refreshIndicator.onRefresh();
+      await tester.pumpAndSettle();
+
+      expect(loadCount, 2);
+    });
+
+    testWidgets('unlock event after deferred startup does not reload images', (
+      WidgetTester tester,
+    ) async {
+      int loadCount = 0;
+      final ValueNotifier<int> unlockEvents = ValueNotifier<int>(0);
+      addTearDown(unlockEvents.dispose);
+
+      await tester.pumpWidget(
+        buildTestApp(
+          MyHomePage(
+            title: 'Eyes Only',
+            settingsStore: FakeSettingsStore(
+              const AppSettings(
+                managerModeEnabled: false,
+                useBiometricLock: false,
+                darkMode: false,
+                pushNotificationsEnabled: false,
+                managerServerURL: null,
+                lastLoggedInUsername: null,
+                deviceServerURLs: <String>['http://org'],
+                organizations: <AppOrganization>[
+                  AppOrganization(id: 'org-1', name: 'Org', apiUrl: 'http://org'),
+                ],
+              ),
+            ),
+            membershipChecker: (_) async => true,
+            unlockEvents: unlockEvents,
+            deferStartupImageCheckFeedbackUntilUnlock: true,
+            imageFeedService: FakeImageFeedService(
+              onLoad: ({required settings, required onUpdate}) async {
+                loadCount++;
+                onUpdate(
+                  <DeviceEncryptedImageFeedSection>[
+                    DeviceEncryptedImageFeedSection(
+                      sectionId: 's1',
+                      organizationName: 'Org',
+                      groupId: 'group-1',
+                      groupName: 'Alpha',
+                      days: <DeviceEncryptedImageFeedDay>[
+                        DeviceEncryptedImageFeedDay(
+                          day: DateTime.utc(2026, 5, 4),
+                          items: <DeviceEncryptedImageFeedItem>[
+                            DeviceEncryptedImageFeedItem(
+                              imageUuid: 'img-1',
+                              isCorrupt: false,
+                              isLoading: false,
+                              imageBytes: _transparentImageBytes,
+                              baseUrl: 'http://org',
+                              groupId: 'group-1',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                  true,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(loadCount, 1);
+
+      unlockEvents.value = 1;
+      await tester.pumpAndSettle();
+
+      expect(loadCount, 1);
+    });
+
     testWidgets('shows send message icon for managers with images and opens send page', (
       WidgetTester tester,
     ) async {
@@ -781,6 +924,8 @@ class FakeImageFeedService extends DeviceEncryptedImageFeedService {
   @override
   Future<void> loadFeedProgressively({
     required AppSettings settings,
+    List<DeviceEncryptedImageFeedSection> existingSections =
+        const <DeviceEncryptedImageFeedSection>[],
     required void Function(
       List<DeviceEncryptedImageFeedSection> sections,
       bool isComplete,

@@ -61,7 +61,7 @@ void main() {
           as Map<String, dynamic>;
       payload['cached_at_ms'] = DateTime.now()
           .toUtc()
-          .subtract(const Duration(days: 2))
+          .subtract(const Duration(days: 32))
           .millisecondsSinceEpoch;
       await cacheFile.writeAsString(jsonEncode(payload));
 
@@ -99,6 +99,47 @@ void main() {
 
       expect(await cache.read('keep-image'), isNotNull);
       expect(await cache.read('drop-image'), isNull);
+    });
+
+    test('prunes expired entries without pruning inactive ids', () async {
+      await cache.write(
+        imageUuid: 'fresh-image',
+        encryptedBlobBytes: Uint8List.fromList(<int>[1, 2]),
+      );
+      await cache.write(
+        imageUuid: 'expired-image',
+        encryptedBlobBytes: Uint8List.fromList(<int>[3, 4]),
+      );
+
+      final Directory cacheDirectory = Directory(
+        '${tempRoot.path}/secure_decrypted_image_cache_v2',
+      );
+      final List<FileSystemEntity> entries = await cacheDirectory.list().toList();
+      for (final FileSystemEntity entry in entries) {
+        if (entry is! File) {
+          continue;
+        }
+        final Map<String, dynamic> payload =
+            jsonDecode(await entry.readAsString()) as Map<String, dynamic>;
+        payload['cached_at_ms'] = DateTime.now()
+            .toUtc()
+            .subtract(const Duration(days: 32))
+            .millisecondsSinceEpoch;
+        await entry.writeAsString(jsonEncode(payload));
+      }
+
+      await cache.write(
+        imageUuid: 'fresh-image',
+        encryptedBlobBytes: Uint8List.fromList(<int>[1, 2]),
+      );
+
+      await cache.pruneToActiveImageUuids(
+        <String>{},
+        pruneInactiveEntries: false,
+      );
+
+      expect(await cache.read('fresh-image'), isNotNull);
+      expect(await cache.read('expired-image'), isNull);
     });
   });
 

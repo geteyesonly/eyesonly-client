@@ -274,6 +274,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeLoadingImages => 'Loading images...';
 
   @override
+  String get homeLookingForNewPhotos => 'Looking for new photos...';
+
+  @override
+  String get homeDownloadingNewImages => 'Downloading new images...';
+
+  @override
+  String get homeNoNewImagesFound => 'No new images found.';
+
+  @override
   String get homeUnknownDay => 'Unknown day';
 
   @override
@@ -304,6 +313,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get captureNoCameraAvailable =>
       'No camera is available on this device.';
+
+  @override
+  String get captureFlashModeFailed =>
+      'Could not change flash mode. Please try again.';
+
+  @override
+  String get captureTakePhotoFailed =>
+      'Could not take photo. Please try again.';
 
   @override
   String get pictureDeleted => 'Picture deleted.';
@@ -342,6 +359,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendSending => 'Sending...';
+
+  @override
+  String get sendFailedTryAgain => 'Sending failed. Please try again.';
 
   @override
   String get sendSend => 'Send';
@@ -759,6 +779,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupDetailLeaveAction => 'Leave';
 
   @override
+  String get groupDetailDeleteGroupTitle => 'Delete Group?';
+
+  @override
+  String groupDetailDeleteGroupPrompt(Object groupName) {
+    return 'Do you really want to delete $groupName?\n\nThis action cannot be undone.';
+  }
+
+  @override
+  String get groupDetailDeleteGroupAction => 'Delete Group';
+
+  @override
   String groupDetailNotificationSent(int notifiedCount) {
     return 'Notification sent to $notifiedCount devices.';
   }
@@ -877,7 +908,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onboardingIAmMainManagerAction => 'I am a main manager';
+  String get onboardingIAmMainManagerAction => 'I am a manager';
 
   @override
   String get onboardingBackAction => 'Back';
@@ -956,6 +987,17 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: 'Will be deleted in $days days',
       one: 'Will be deleted in 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String expirationInHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: 'Will be deleted in $hours hours',
+      one: 'Will be deleted in 1 hour',
     );
     return '$_temp0';
   }

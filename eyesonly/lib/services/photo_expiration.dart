@@ -70,6 +70,8 @@ String formatPhotoExpirationText(
   DateTime? now,
   String Function(int daysLeft) expiresInDaysTextBuilder =
       _defaultExpiresInDaysText,
+  String Function(int hoursLeft) expiresInHoursTextBuilder =
+      _defaultExpiresInHoursText,
   String expiredText = 'Expired',
 }) {
   final DateTime currentTime = now ?? DateTime.now();
@@ -77,6 +79,12 @@ String formatPhotoExpirationText(
 
   if (remaining.inSeconds <= 0) {
     return expiredText;
+  }
+
+  if (remaining.inSeconds < Duration.secondsPerDay) {
+    final int hoursLeft =
+        (remaining.inSeconds / Duration.secondsPerHour).ceil();
+    return expiresInHoursTextBuilder(hoursLeft);
   }
 
   final int daysLeft = (remaining.inSeconds / Duration.secondsPerDay).ceil();
@@ -88,4 +96,11 @@ String _defaultExpiresInDaysText(int daysLeft) {
     return 'Expires in 1 day';
   }
   return 'Expires in $daysLeft days';
+}
+
+String _defaultExpiresInHoursText(int hoursLeft) {
+  if (hoursLeft == 1) {
+    return 'Expires in 1 hour';
+  }
+  return 'Expires in $hoursLeft hours';
 }

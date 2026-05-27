@@ -2,11 +2,13 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:eyesonly/l10n/app_localizations.dart';
+import 'package:eyesonly/screens/main_manager/login_page.dart';
 
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/manager/encrypted_media_upload_service.dart';
 import 'package:eyesonly/services/photo_expiration.dart';
 import 'package:eyesonly/services/screen_feedback.dart';
+import 'package:eyesonly/services/settings_store.dart';
 
 class SendCapturedPictureResult {
   const SendCapturedPictureResult({
@@ -44,6 +46,7 @@ class _SendCapturedPicturePageState extends State<SendCapturedPicturePage> {
   final TextEditingController _captionController = TextEditingController();
   final EncryptedMediaUploadService _uploadService =
       EncryptedMediaUploadService();
+  final SettingsStore _settingsStore = SettingsStore();
 
   bool _isSending = false;
   late PhotoExpirationSelection _expirationSelection;
@@ -52,6 +55,16 @@ class _SendCapturedPicturePageState extends State<SendCapturedPicturePage> {
   void initState() {
     super.initState();
     _expirationSelection = widget.initialExpirationSelection;
+  }
+
+  Future<void> _persistExpirationSelection(
+    PhotoExpirationSelection selection,
+  ) async {
+    try {
+      await _settingsStore.savePreferredPhotoExpirationSelection(selection);
+    } catch (_) {
+      // Best effort only. Sending still uses the in-memory selection.
+    }
   }
 
   void _deletePicture() {
@@ -98,6 +111,10 @@ class _SendCapturedPicturePageState extends State<SendCapturedPicturePage> {
         ),
       );
     } on ApiException catch (error) {
+      if (_isSessionExpiredError(error)) {
+        await _redirectToLoginForExpiredSession(error);
+        return;
+      }
       if (!mounted) {
         return;
       }
@@ -106,7 +123,11 @@ class _SendCapturedPicturePageState extends State<SendCapturedPicturePage> {
       if (!mounted) {
         return;
       }
-      ScreenFeedback.showError(context, error);
+      ScreenFeedback.showError(
+        context,
+        error,
+        fallbackMessage: AppLocalizations.of(context)!.sendFailedTryAgain,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -114,6 +135,28 @@ class _SendCapturedPicturePageState extends State<SendCapturedPicturePage> {
         });
       }
     }
+  }
+
+  bool _isSessionExpiredError(ApiException error) {
+    final String message = error.message.trim().toLowerCase();
+    return error.statusCode == 401 ||
+        message.contains('session has expired') ||
+        message.contains('please log in again') ||
+        message.contains('could not be authenticated with this server');
+  }
+
+  Future<void> _redirectToLoginForExpiredSession(ApiException error) async {
+    await _settingsStore.saveLastLoggedInUsername(null);
+    if (!mounted) {
+      return;
+    }
+    ScreenFeedback.showError(context, error);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const LoginPage(),
+      ),
+      (Route<dynamic> route) => route.isFirst,
+    );
   }
 
   @override
@@ -170,6 +213,7 @@ class _SendCapturedPicturePageState extends State<SendCapturedPicturePage> {
                   setState(() {
                     _expirationSelection = nextSelection;
                   });
+                  _persistExpirationSelection(nextSelection);
                 },
               ),
               const SizedBox(height: 16),
@@ -354,6 +398,7 @@ class _ExpirationSelectorState extends State<_ExpirationSelector> {
     return formatPhotoExpirationText(
       expiresAt,
       expiresInDaysTextBuilder: l10n.expirationInDays,
+      expiresInHoursTextBuilder: l10n.expirationInHours,
       expiredText: l10n.expirationExpired,
     );
   }

@@ -1,5 +1,6 @@
 import 'package:eyesonly/services/manager/api_service.dart';
 import 'package:eyesonly/services/manager/auth_token_store.dart';
+import 'package:eyesonly/screens/main_manager/login_page.dart';
 import 'package:eyesonly/services/settings_store.dart';
 import 'package:flutter/material.dart';
 import 'package:eyesonly/l10n/app_localizations.dart';
@@ -18,8 +19,41 @@ class _AccountPageState extends State<AccountPage> {
   final SettingsStore _settingsStore = SettingsStore();
   final AuthTokenStore _tokenStore = AuthTokenStore();
   bool _isLoggingOut = false;
+  bool _isCheckingSession = true;
 
   AppLocalizations? get _l10n => AppLocalizations.of(context);
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureActiveSession();
+  }
+
+  Future<void> _ensureActiveSession() async {
+    final String? accessToken = await _tokenStore.readAccessToken();
+    final bool hasSession = accessToken != null && accessToken.trim().isNotEmpty;
+    if (!mounted) {
+      return;
+    }
+
+    if (!hasSession) {
+      await _settingsStore.saveLastLoggedInUsername(null);
+      if (!mounted) {
+        return;
+      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute<void>(
+          builder: (BuildContext context) => const LoginPage(),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCheckingSession = false;
+    });
+  }
 
   Future<void> _logout() async {
     setState(() {
@@ -54,6 +88,14 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations? l10n = _l10n;
+
+    if (_isCheckingSession) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n?.homeTabAccount ?? 'Account')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final String username = (widget.username == null || widget.username!.trim().isEmpty)
         ? (l10n?.accountNotLoggedIn ?? 'Not logged in')
         : widget.username!.trim();

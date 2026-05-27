@@ -44,6 +44,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   bool _isLoading = true;
   bool _showDeviceIdentifiers = false;
   bool _isLeaving = false;
+  bool _isDeletingGroup = false;
   String? _errorMessage;
   late final GroupDisplayService _groupDisplayService;
   late final ManagerApiService _managerApiService;
@@ -190,6 +191,64 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
     if (shouldRemove == true) {
       await _removeDevice(device);
+    }
+  }
+
+  Future<void> _deleteGroup() async {
+    setState(() => _isDeletingGroup = true);
+    try {
+      await _managerApiService.hydrateTokens();
+      await _managerApiService.deleteGroup(groupId: widget.groupId);
+
+      if (!mounted) return;
+      Navigator.of(context).pop(true); // return to groups overview and refresh
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScreenFeedback.showError(context, error);
+    } catch (error) {
+      if (!mounted) return;
+      ScreenFeedback.showError(context, error);
+    } finally {
+      if (mounted) {
+        setState(() => _isDeletingGroup = false);
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteGroup() async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            _l10n?.groupDetailDeleteGroupTitle ?? 'Delete Group?',
+          ),
+          content: Text(
+            _l10n?.groupDetailDeleteGroupPrompt(widget.groupName) ??
+                'Do you really want to delete ${widget.groupName}?\n\nThis action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(_l10n?.groupDetailCancel ?? 'Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+              child: Text(
+                _l10n?.groupDetailDeleteGroupAction ?? 'Delete Group',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      await _deleteGroup();
     }
   }
 
@@ -382,18 +441,134 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                     const SizedBox(height: 8),
                     Expanded(
                       child: _errorMessage != null
-                          ? Center(child: Text(_errorMessage!))
-                          : _devices.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    l10n?.groupDetailNoDevicesInGroup ??
-                                        'No devices in this group.',
+                          ? ListView(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(_errorMessage!),
+                                ),
+                                const SizedBox(height: 12),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: FilledButton.icon(
+                                    onPressed: _isDeletingGroup
+                                        ? null
+                                        : _confirmDeleteGroup,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                      foregroundColor: Theme.of(
+                                        context,
+                                      ).colorScheme.onError,
+                                    ),
+                                    icon: _isDeletingGroup
+                                        ? const SizedBox(
+                                            height: 16,
+                                            width: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.delete_forever_outlined,
+                                          ),
+                                    label: Text(
+                                      l10n?.groupDetailDeleteGroupAction ??
+                                          'Delete Group',
+                                    ),
                                   ),
+                                ),
+                              ],
+                            )
+                          : _devices.isEmpty
+                              ? ListView(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Text(
+                                        l10n?.groupDetailNoDevicesInGroup ??
+                                            'No devices in this group.',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: FilledButton.icon(
+                                        onPressed: _isDeletingGroup
+                                            ? null
+                                            : _confirmDeleteGroup,
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: Theme.of(
+                                            context,
+                                          ).colorScheme.error,
+                                          foregroundColor: Theme.of(
+                                            context,
+                                          ).colorScheme.onError,
+                                        ),
+                                        icon: _isDeletingGroup
+                                            ? const SizedBox(
+                                                height: 16,
+                                                width: 16,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const Icon(
+                                                Icons.delete_forever_outlined,
+                                              ),
+                                        label: Text(
+                                          l10n?.groupDetailDeleteGroupAction ??
+                                              'Delete Group',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 )
                               : ListView.separated(
-                                  itemCount: _devices.length,
-                                  separatorBuilder: (_, _) => const Divider(height: 1),
+                                  itemCount: _devices.length + 1,
+                                  separatorBuilder: (_, int index) =>
+                                      index < _devices.length - 1
+                                      ? const Divider(height: 1)
+                                      : const SizedBox(height: 12),
                                   itemBuilder: (BuildContext context, int index) {
+                                    if (index == _devices.length) {
+                                      return Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: FilledButton.icon(
+                                          onPressed: _isDeletingGroup
+                                              ? null
+                                              : _confirmDeleteGroup,
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: Theme.of(
+                                              context,
+                                            ).colorScheme.error,
+                                            foregroundColor: Theme.of(
+                                              context,
+                                            ).colorScheme.onError,
+                                          ),
+                                          icon: _isDeletingGroup
+                                              ? const SizedBox(
+                                                  height: 16,
+                                                  width: 16,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                )
+                                              : const Icon(
+                                                  Icons.delete_forever_outlined,
+                                                ),
+                                          label: Text(
+                                            l10n?.groupDetailDeleteGroupAction ??
+                                                'Delete Group',
+                                  ),
+                                        ),
+                                      );
+                                    }
+
                                     final _DeviceListEntry device = _devices[index];
                                     return ListTile(
                                       leading: const Icon(Icons.devices_outlined),
