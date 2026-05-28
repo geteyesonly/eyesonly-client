@@ -103,9 +103,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsImageCacheDeleted => 'Image cache deleted.';
 
   @override
-  String settingsImageCacheDeleteFailed(String error) {
-    return 'Could not delete image cache: $error';
-  }
+  String get settingsImageCacheDeleteFailed => 'Could not delete image cache.';
 
   @override
   String get settingsAddOrgFirst => 'Add an organization first.';
@@ -128,12 +126,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeviceLockNotEnabled => 'Device lock was not enabled.';
 
   @override
-  String settingsPushNotificationsFailed(String error) {
-    return 'Could not update push notifications: $error';
-  }
+  String get settingsPushNotificationsFailed => 'Could not update push notifications.';
 
   @override
   String get settingsAppVersionValue => '1.0.0';
+
+  @override
+  String get unexpectedErrorOccurred => 'An unexpected error occurred.';
 
   @override
   String get appTitle => 'Eyes Only';
@@ -269,6 +268,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeApiUnreachable =>
       'Could not reach the API. Please check your connection and try again.';
+
+  @override
+  String get homeOffline => 'You are offline.';
+
+  @override
+  String get homeNoInternetConnection =>
+      'No internet connection. Please connect and try again.';
 
   @override
   String get homeLoadingImages => 'Loading images...';

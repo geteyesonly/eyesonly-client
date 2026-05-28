@@ -35,29 +35,16 @@
   "settingsDeleteImageCacheDialogTitle": "Verschlüsselten Bild-Cache löschen",
   "settingsDeleteImageCacheDialogContent": "Alle lokal zwischengespeicherten verschlüsselten Bilddaten von diesem Gerät löschen?\n\nBeim nächsten Öffnen von Fotos werden verschlüsselte Bilddaten erneut geladen und erst beim Anzeigen entschlüsselt.",
   "settingsImageCacheDeleted": "Bild-Cache gelöscht.",
-  "settingsImageCacheDeleteFailed": "Bild-Cache konnte nicht gelöscht werden: {error}",
-  "@settingsImageCacheDeleteFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "settingsImageCacheDeleteFailed": "Bild-Cache konnte nicht gelöscht werden.",
   "settingsAddOrgFirst": "Füge zuerst eine Organisation hinzu.",
   "settingsResetAppDialogTitle": "App zurücksetzen",
   "settingsResetAppDialogContent": "Warnung: Beim Zurücksetzen der App werden lokale Schlüssel, Token, Installationsidentität, Organisationen, zwischengespeicherte Bilder und App-Einstellungen entfernt. Diese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?",
   "settingsReset": "Zurücksetzen",
   "settingsDeviceLockNotAvailable": "Auf diesem Gerät ist keine Geräteauthentifizierung verfügbar.",
   "settingsDeviceLockNotEnabled": "Gerätesperre wurde nicht aktiviert.",
-  "settingsPushNotificationsFailed": "Push-Benachrichtigungen konnten nicht aktualisiert werden: {error}",
-  "@settingsPushNotificationsFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "settingsPushNotificationsFailed": "Push-Benachrichtigungen konnten nicht aktualisiert werden.",
   "settingsAppVersionValue": "1.0.0",
+  "unexpectedErrorOccurred": "Ein unerwarteter Fehler ist aufgetreten.",
   "appTitle": "Eyes Only",
   "unlockReason": "Eyes Only entsperren",
   "lockNoAuthAvailable": "Keine Geräteauthentifizierung verfügbar.",
@@ -99,6 +86,8 @@
   "groupsServerTimeoutWithUrl": "{apiUrl} konnte innerhalb von 10 Sekunden nicht erreicht werden.",
   "groupsServerTimeout": "Der Server konnte innerhalb von 10 Sekunden nicht erreicht werden.",
   "homeApiUnreachable": "API nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.",
+  "homeOffline": "Du bist offline.",
+  "homeNoInternetConnection": "Keine Internetverbindung. Bitte verbinde dich und versuche es erneut.",
   "homeLoadingImages": "Bilder werden geladen...",
   "homeLookingForNewPhotos": "Suche nach neuen Fotos...",
   "homeDownloadingNewImages": "Neue Bilder werden heruntergeladen...",

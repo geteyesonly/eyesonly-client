@@ -100,7 +100,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
         return;
       }
       setState(() {
-        _cameraErrorMessage = error.toString();
+        _cameraErrorMessage = AppLocalizations.of(context)?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
         _isInitializingCamera = false;
       });
     }
@@ -236,7 +236,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
         return;
       }
       setState(() {
-        _cameraErrorMessage = error.toString();
+        _cameraErrorMessage = AppLocalizations.of(context)?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
         _isInitializingCamera = false;
       });
     }
@@ -279,6 +279,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     }
 
     bool captureOrientationLocked = false;
+    XFile? capturedFile;
 
     setState(() {
       _isCapturing = true;
@@ -300,7 +301,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
         // Not all devices support lockCaptureOrientation; continue regardless.
       }
 
-      final XFile capturedFile = await controller.takePicture();
+      capturedFile = await controller.takePicture();
       final Uint8List rawBytes = await capturedFile.readAsBytes();
       final Uint8List normalizedBytes = JpegPrivacy.normalizeJpegOrientation(
         rawBytes,
@@ -308,17 +309,6 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       final Uint8List imageBytes = JpegPrivacy.stripJpegMetadata(
         normalizedBytes,
       );
-
-      if (!kIsWeb) {
-        try {
-          final File tempFile = File(capturedFile.path);
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-          }
-        } catch (_) {
-          // Best effort only. The captured bytes are already held in memory.
-        }
-      }
 
       if (!mounted) {
         return;
@@ -361,6 +351,16 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
         fallbackMessage: AppLocalizations.of(context)!.captureTakePhotoFailed,
       );
     } finally {
+      if (!kIsWeb && capturedFile != null) {
+        try {
+          final File tempFile = File(capturedFile.path);
+          if (await tempFile.exists()) {
+            await tempFile.delete();
+          }
+        } catch (_) {
+          // Best effort cleanup of the camera temp file.
+        }
+      }
       if (captureOrientationLocked) {
         try {
           await controller.unlockCaptureOrientation();

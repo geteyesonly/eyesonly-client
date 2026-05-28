@@ -9,8 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'crypto/eyes_only_crypto.dart';
 
 const String _cacheEncryptionKeyStorageKey =
-  'secure_decrypted_image_cache_key_v2';
-const String _cacheDirectoryName = 'secure_decrypted_image_cache_v2';
+  'secure_decrypted_image_cache_key_v3';
+const String _cacheDirectoryName = 'secure_decrypted_image_cache_v3';
 const String _cacheEntryFileExtension = '.cache';
 const Duration _cacheTtl = Duration(days: 30);
 
@@ -187,7 +187,7 @@ class SecureEncryptedImageBlobCache {
   }
 
   Future<Directory> _cacheDirectory() async {
-    final Directory parent = await (_directoryProvider?.call() ?? getTemporaryDirectory());
+    final Directory parent = await (_directoryProvider?.call() ?? getApplicationSupportDirectory());
     final Directory directory = Directory('${parent.path}/$_cacheDirectoryName');
     if (!await directory.exists()) {
       await directory.create(recursive: true);

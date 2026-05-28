@@ -62,7 +62,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage>
   with WidgetsBindingObserver {
-  static const String _offlineSnackbarMessage = 'You are offline.';
   static const Duration _noNewImagesMessageCooldown = Duration(minutes: 60);
 
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
@@ -316,7 +315,7 @@ class _MyHomePageState extends State<MyHomePage>
       }
       setState(() {
         _isLoadingImages = false;
-        _imageErrorMessage = error.toString();
+        _imageErrorMessage = _l10n.unexpectedErrorOccurred;
       });
     } finally {
       _triggerPendingStartupFeedbackAfterUnlock();
@@ -429,7 +428,7 @@ class _MyHomePageState extends State<MyHomePage>
           isManualAction: isManualAction,
           allowOfflineMessage: showOfflineMessage,
         )) {
-          _showImageCheckMessage(_offlineSnackbarMessage);
+          _showImageCheckMessage(_l10n.homeOffline);
         }
         return;
       }
@@ -513,7 +512,7 @@ class _MyHomePageState extends State<MyHomePage>
       isManualAction: isManualAction,
       allowOfflineMessage: true,
     )) {
-      _showImageCheckMessage(_offlineSnackbarMessage);
+      _showImageCheckMessage(_l10n.homeOffline);
     }
   }
 
@@ -567,7 +566,7 @@ class _MyHomePageState extends State<MyHomePage>
     if (!hasConnection) {
       ScreenFeedback.showMessage(
         context,
-        'No internet connection. Please connect and try again.',
+        _l10n.homeNoInternetConnection,
       );
       return;
     }

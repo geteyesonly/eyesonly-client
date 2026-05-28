@@ -167,7 +167,7 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
         return;
       }
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage = _l10n?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
         _isLoading = false;
       });
     }

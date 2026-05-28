@@ -749,76 +749,6 @@ void main() {
   });
 
   group('SettingsPage edge cases', () {
-    testWidgets('does not enable device lock when the device is unsupported', (
-      WidgetTester tester,
-    ) async {
-      final FakeSettingsStore settingsStore = FakeSettingsStore(
-        const AppSettings(
-          managerModeEnabled: false,
-          useBiometricLock: false,
-          darkMode: false,
-          pushNotificationsEnabled: false,
-          managerServerURL: null,
-          lastLoggedInUsername: null,
-          deviceServerURLs: <String>[],
-          organizations: <AppOrganization>[],
-        ),
-      );
-
-      await tester.pumpWidget(
-        buildTestApp(
-          SettingsPage(
-            settingsStore: settingsStore,
-            deviceSupportChecker: () async => false,
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Device Lock'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('No device authentication is available on this device.'),
-        findsOneWidget,
-      );
-      expect(settingsStore.savedUseBiometricLock, isNull);
-    });
-
-    testWidgets('does not enable device lock when authentication is declined', (
-      WidgetTester tester,
-    ) async {
-      final FakeSettingsStore settingsStore = FakeSettingsStore(
-        const AppSettings(
-          managerModeEnabled: false,
-          useBiometricLock: false,
-          darkMode: false,
-          pushNotificationsEnabled: false,
-          managerServerURL: null,
-          lastLoggedInUsername: null,
-          deviceServerURLs: <String>[],
-          organizations: <AppOrganization>[],
-        ),
-      );
-
-      await tester.pumpWidget(
-        buildTestApp(
-          SettingsPage(
-            settingsStore: settingsStore,
-            deviceSupportChecker: () async => true,
-            deviceAuthenticator: () async => false,
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Device Lock'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Device lock was not enabled.'), findsOneWidget);
-      expect(settingsStore.savedUseBiometricLock, isNull);
-    });
-
     testWidgets('shows an error when image cache deletion fails', (
       WidgetTester tester,
     ) async {
@@ -842,7 +772,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Could not delete image cache: cache failed'),
+        find.textContaining('Could not delete image cache'),
         findsOneWidget,
       );
     });

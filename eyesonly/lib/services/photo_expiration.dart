@@ -13,30 +13,6 @@ class PhotoExpirationOption {
   final String label;
 }
 
-const List<PhotoExpirationOption> photoExpirationOptions =
-    <PhotoExpirationOption>[
-      PhotoExpirationOption(
-        preset: PhotoExpirationPreset.oneDay,
-        label: '1 day',
-      ),
-      PhotoExpirationOption(
-        preset: PhotoExpirationPreset.threeDays,
-        label: '3 days',
-      ),
-      PhotoExpirationOption(
-        preset: PhotoExpirationPreset.sevenDays,
-        label: '7 days',
-      ),
-      PhotoExpirationOption(
-        preset: PhotoExpirationPreset.fourteenDays,
-        label: '14 days',
-      ),
-      PhotoExpirationOption(
-        preset: PhotoExpirationPreset.oneMonth,
-        label: '1 month',
-      ),
-    ];
-
 class PhotoExpirationSelection {
   const PhotoExpirationSelection({required this.preset});
 

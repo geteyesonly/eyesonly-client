@@ -426,7 +426,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
       setState(() {
         _isPreparingJoinQr = false;
-        _joinQrError = error.toString();
+        _joinQrError = _l10n?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
       });
     }
   }
@@ -496,7 +496,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         return;
       }
       setState(() {
-        _membershipPollingError = error.toString();
+        _membershipPollingError = _l10n?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
       });
     }
   }
@@ -635,7 +635,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         return;
       }
       setState(() {
-        _pushChoiceError = error.toString();
+        _pushChoiceError = _l10n?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
         _isSubmittingPushChoice = false;
       });
     }

@@ -48,7 +48,7 @@ void main() {
         entry!.encryptedBlobBytes,
         Uint8List.fromList(<int>[1, 2, 3, 4]),
       );
-      expect(secureStorage.writtenKeys, contains('secure_decrypted_image_cache_key_v2'));
+      expect(secureStorage.writtenKeys, contains('secure_decrypted_image_cache_key_v3'));
     });
 
     test('returns null and deletes expired cache entries', () async {
@@ -112,7 +112,7 @@ void main() {
       );
 
       final Directory cacheDirectory = Directory(
-        '${tempRoot.path}/secure_decrypted_image_cache_v2',
+        '${tempRoot.path}/secure_decrypted_image_cache_v3',
       );
       final List<FileSystemEntity> entries = await cacheDirectory.list().toList();
       for (final FileSystemEntity entry in entries) {
@@ -184,7 +184,7 @@ void main() {
 
 Future<File> _singleCacheFile(Directory tempRoot) async {
   final Directory cacheDirectory = Directory(
-    '${tempRoot.path}/secure_decrypted_image_cache_v2',
+    '${tempRoot.path}/secure_decrypted_image_cache_v3',
   );
   final List<FileSystemEntity> entries = await cacheDirectory.list().toList();
   return entries.single as File;

@@ -126,7 +126,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage = _l10n?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
         _isLoading = false;
       });
     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -69,6 +71,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  static const Duration _postUnlockLifecycleGrace = Duration(seconds: 10);
+
   final LocalAuthentication _localAuthentication = LocalAuthentication();
   final ValueNotifier<int> _unlockEvents = ValueNotifier<int>(0);
   late final SettingsStore _settingsStore;
@@ -86,7 +90,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _configureScreenCaptureMonitoring();
+    unawaited(_configureScreenCaptureMonitoring());
     _settingsStore = widget.settingsStore ?? SettingsStore();
     _currentSettings = widget.initialSettings;
     _darkMode = widget.initialSettings.darkMode;
@@ -249,7 +253,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       });
       if (didAuthenticate) {
         _unlockEvents.value = _unlockEvents.value + 1;
-        _ignoreLifecycleUntil = DateTime.now().add(const Duration(seconds: 10));
+        _ignoreLifecycleUntil = DateTime.now().add(_postUnlockLifecycleGrace);
       }
     } on PlatformException catch (error) {
       if (!mounted) {

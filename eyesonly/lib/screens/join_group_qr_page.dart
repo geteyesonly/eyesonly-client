@@ -84,7 +84,7 @@ class _JoinGroupQrPageState extends State<JoinGroupQrPage> {
       }
 
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage = _l10n?.unexpectedErrorOccurred ?? 'An unexpected error occurred.';
         _isLoading = false;
       });
     }

@@ -34,29 +34,16 @@
   "settingsDeleteImageCacheDialogTitle": "Delete Encrypted Image Cache",
   "settingsDeleteImageCacheDialogContent": "Delete all locally cached encrypted image blobs from this device?\n\nThe next time you open Photos, encrypted blobs will be fetched again and decrypted when viewed.",
   "settingsImageCacheDeleted": "Image cache deleted.",
-  "settingsImageCacheDeleteFailed": "Could not delete image cache: {error}",
-  "@settingsImageCacheDeleteFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "settingsImageCacheDeleteFailed": "Could not delete image cache.",
   "settingsAddOrgFirst": "Add an organization first.",
   "settingsResetAppDialogTitle": "Reset App",
   "settingsResetAppDialogContent": "Warning: Resetting the app will remove local keys, tokens, installation identity, organizations, cached images, and app settings. This action cannot be undone.\n\nAre you sure you want to continue?",
   "settingsReset": "Reset",
   "settingsDeviceLockNotAvailable": "No device authentication is available on this device.",
   "settingsDeviceLockNotEnabled": "Device lock was not enabled.",
-  "settingsPushNotificationsFailed": "Could not update push notifications: {error}",
-  "@settingsPushNotificationsFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "settingsPushNotificationsFailed": "Could not update push notifications.",
   "settingsAppVersionValue": "1.0.0",
+  "unexpectedErrorOccurred": "An unexpected error occurred.",
   "@@locale": "en",
   "appTitle": "Eyes Only",
   "unlockReason": "Unlock Eyes Only",
@@ -131,6 +118,8 @@
   },
   "groupsServerTimeout": "Could not reach the server within 10 seconds.",
   "homeApiUnreachable": "Could not reach the API. Please check your connection and try again.",
+  "homeOffline": "You are offline.",
+  "homeNoInternetConnection": "No internet connection. Please connect and try again.",
   "homeLoadingImages": "Loading images...",
   "homeLookingForNewPhotos": "Looking for new photos...",
   "homeDownloadingNewImages": "Downloading new images...",

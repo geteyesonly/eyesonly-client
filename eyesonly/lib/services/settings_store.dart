@@ -144,12 +144,17 @@ class SettingsStore {
 
   Future<void> saveOrganizations(List<AppOrganization> organizations) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final List<String> normalizedUrls = organizations
+    final Map<String, AppOrganization> seen = <String, AppOrganization>{};
+    for (final AppOrganization org in organizations) {
+      final String key = org.apiUrl.trim().toLowerCase();
+      seen.putIfAbsent(key, () => org);
+    }
+    final List<AppOrganization> deduped = seen.values.toList();
+    final List<String> normalizedUrls = deduped
         .map((AppOrganization organization) => organization.apiUrl.trim())
         .where((String url) => url.isNotEmpty)
-        .toSet()
         .toList();
-    final List<String> encodedOrganizations = organizations
+    final List<String> encodedOrganizations = deduped
         .map(
           (AppOrganization organization) => jsonEncode(organization.toJson()),
         )

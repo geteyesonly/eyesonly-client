@@ -36,14 +36,11 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late final LocalAuthentication _localAuthentication;
   late final SettingsStore _settingsStore;
   late final SecureEncryptedImageBlobCache _imageCache;
   late final PushNotificationsService _pushNotificationsService;
   String? _managerServerURL;
   bool _managerModeEnabled = AppSettings.defaults.managerModeEnabled;
-  // ignore: unused_field
-  bool _useBiometricLock = AppSettings.defaults.useBiometricLock;
   bool _darkMode = AppSettings.defaults.darkMode;
   bool _pushNotificationsEnabled = AppSettings.defaults.pushNotificationsEnabled;
   bool _isUpdatingPushNotifications = false;
@@ -54,7 +51,6 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _localAuthentication = widget.localAuthentication ?? LocalAuthentication();
     _settingsStore = widget.settingsStore ?? SettingsStore();
     _imageCache = widget.imageCache ?? SecureEncryptedImageBlobCache();
     _pushNotificationsService =
@@ -71,7 +67,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
     setState(() {
       _managerModeEnabled = settings.managerModeEnabled;
-      _useBiometricLock = settings.useBiometricLock;
       _darkMode = settings.darkMode;
       _pushNotificationsEnabled = settings.pushNotificationsEnabled;
       _managerServerURL = settings.managerServerURL;
@@ -150,63 +145,6 @@ class _SettingsPageState extends State<SettingsPage> {
     await _settingsStore.saveManagerServerURL(value);
   }
 
-  // ignore: unused_element
-  Future<void> _setBiometricLock(bool value) async {
-    if (!value) {
-      setState(() {
-        _useBiometricLock = false;
-      });
-      await _settingsStore.saveUseBiometricLock(false);
-      return;
-    }
-
-    final bool isDeviceSupported = await (widget.deviceSupportChecker?.call() ??
-      _localAuthentication.isDeviceSupported());
-    if (!isDeviceSupported) {
-      if (!mounted) {
-        return;
-      }
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.settingsDeviceLockNotAvailable),
-        ),
-      );
-      setState(() {
-        _useBiometricLock = false;
-      });
-      return;
-    }
-
-    final bool didAuthenticate = await (widget.deviceAuthenticator?.call() ??
-        _localAuthentication.authenticate(
-          localizedReason: 'Confirm device lock for Eyes Only',
-          options: const AuthenticationOptions(
-            stickyAuth: true,
-          ),
-        ));
-
-    if (!mounted) {
-      return;
-    }
-
-    if (!didAuthenticate) {
-      setState(() {
-        _useBiometricLock = false;
-      });
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsDeviceLockNotEnabled)),
-      );
-      return;
-    }
-
-    setState(() {
-      _useBiometricLock = true;
-    });
-    await _settingsStore.saveUseBiometricLock(true);
-  }
-
   Future<void> _resetApp() async {
     await (widget.resetAppAction?.call() ?? ResetService.resetApp());
     if (!mounted) {
@@ -264,7 +202,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsImageCacheDeleteFailed(error.toString()))),
+        SnackBar(content: Text(l10n.settingsImageCacheDeleteFailed)),
       );
     } finally {
       if (mounted) {
@@ -332,7 +270,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.settingsPushNotificationsFailed(error.toString())),
+          content: Text(l10n.settingsPushNotificationsFailed),
         ),
       );
     } finally {

@@ -74,14 +74,6 @@ class DeviceRegistrationService {
   GroupScopedMetadataCipher get _groupScopedMetadataCipher =>
       GroupScopedMetadataCipher(groupContentKeyStore: _groupContentKeyStore);
 
-  /// Returns the cryptography algorithm instance for key generation.
-  X25519 _getAlgorithmInstance() {
-    if (_publicKeyAlgorithm == 'x25519') {
-      return X25519();
-    }
-    throw StateError('Unsupported public key algorithm: \'$_publicKeyAlgorithm\'');
-  }
-
   Future<bool> isCurrentDeviceRegistered({
     required ManagerApiService managerApiService,
   }) async {
@@ -694,7 +686,7 @@ class DeviceRegistrationService {
   }
 
   Future<({String publicKey, String privateKey})> _createNewKeyMaterial() async {
-    final algorithm = _getAlgorithmInstance();
+    final algorithm = X25519();
     final KeyPair keyPair = await algorithm.newKeyPair();
     final SimpleKeyPairData privateKeyData =
         await keyPair.extract() as SimpleKeyPairData;

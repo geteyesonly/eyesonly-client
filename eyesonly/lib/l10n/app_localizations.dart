@@ -269,8 +269,8 @@ abstract class AppLocalizations {
   /// No description provided for @settingsImageCacheDeleteFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not delete image cache: {error}'**
-  String settingsImageCacheDeleteFailed(String error);
+  /// **'Could not delete image cache.'**
+  String get settingsImageCacheDeleteFailed;
 
   /// No description provided for @settingsAddOrgFirst.
   ///
@@ -311,14 +311,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPushNotificationsFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not update push notifications: {error}'**
-  String settingsPushNotificationsFailed(String error);
+  /// **'Could not update push notifications.'**
+  String get settingsPushNotificationsFailed;
 
   /// No description provided for @settingsAppVersionValue.
   ///
   /// In en, this message translates to:
   /// **'1.0.0'**
   String get settingsAppVersionValue;
+
+  /// No description provided for @unexpectedErrorOccurred.
+  ///
+  /// In en, this message translates to:
+  /// **'An unexpected error occurred.'**
+  String get unexpectedErrorOccurred;
 
   /// No description provided for @appTitle.
   ///
@@ -559,6 +565,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not reach the API. Please check your connection and try again.'**
   String get homeApiUnreachable;
+
+  /// No description provided for @homeOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'You are offline.'**
+  String get homeOffline;
+
+  /// No description provided for @homeNoInternetConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Please connect and try again.'**
+  String get homeNoInternetConnection;
 
   /// No description provided for @homeLoadingImages.
   ///

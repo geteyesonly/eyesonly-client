@@ -105,9 +105,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsImageCacheDeleted => 'Bild-Cache gelöscht.';
 
   @override
-  String settingsImageCacheDeleteFailed(String error) {
-    return 'Bild-Cache konnte nicht gelöscht werden: $error';
-  }
+  String get settingsImageCacheDeleteFailed => 'Bild-Cache konnte nicht gelöscht werden.';
 
   @override
   String get settingsAddOrgFirst => 'Füge zuerst eine Organisation hinzu.';
@@ -131,12 +129,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Gerätesperre wurde nicht aktiviert.';
 
   @override
-  String settingsPushNotificationsFailed(String error) {
-    return 'Push-Benachrichtigungen konnten nicht aktualisiert werden: $error';
-  }
+  String get settingsPushNotificationsFailed => 'Push-Benachrichtigungen konnten nicht aktualisiert werden.';
 
   @override
   String get settingsAppVersionValue => '1.0.0';
+
+  @override
+  String get unexpectedErrorOccurred => 'Ein unerwarteter Fehler ist aufgetreten.';
 
   @override
   String get appTitle => 'Eyes Only';
@@ -272,6 +271,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get homeApiUnreachable =>
       'API nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.';
+
+  @override
+  String get homeOffline => 'Du bist offline.';
+
+  @override
+  String get homeNoInternetConnection =>
+      'Keine Internetverbindung. Bitte verbinde dich und versuche es erneut.';
 
   @override
   String get homeLoadingImages => 'Bilder werden geladen...';

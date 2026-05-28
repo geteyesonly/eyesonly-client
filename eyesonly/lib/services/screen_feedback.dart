@@ -34,6 +34,6 @@ class ScreenFeedback {
       return;
     }
 
-    showMessage(context, error.toString());
+    showMessage(context, 'An unexpected error occurred.');
   }
 }
