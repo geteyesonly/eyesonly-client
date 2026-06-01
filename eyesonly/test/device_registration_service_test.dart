@@ -301,6 +301,171 @@ void main() {
         throwsA(isA<ApiException>()),
       );
     });
+
+    test('registerManagerDeviceAndProvisionKeys registers device and provisions all group keys', () async {
+      final FakeGroupContentKeyStore groupContentKeyStore = FakeGroupContentKeyStore();
+      const List<int> rosterKeyBytes = <int>[
+        10, 20, 30, 40, 50, 60, 70, 80,
+        11, 21, 31, 41, 51, 61, 71, 81,
+        12, 22, 32, 42, 52, 62, 72, 82,
+        13, 23, 33, 43, 53, 63, 73, 83,
+      ];
+      const List<int> sharedKeyBytes = <int>[
+        1, 2, 3, 4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 15, 16,
+        17, 18, 19, 20, 21, 22, 23, 24,
+        25, 26, 27, 28, 29, 30, 31, 32,
+      ];
+      await groupContentKeyStore.saveGroupContentKey(
+        'group-1',
+        rosterKeyBytes,
+        scope: groupKeyScopeManagerRoster,
+      );
+      await groupContentKeyStore.saveGroupContentKey(
+        'group-1',
+        sharedKeyBytes,
+        scope: groupKeyScopeGroupShared,
+      );
+      final _KeyMaterial newDeviceKeyMaterial = await _createKeyMaterial();
+      final FakeManagerApiService managerApiService = FakeManagerApiService(
+        baseUrl: 'http://manager',
+        accessTokenValue: _jwtWithUserId(7),
+        mainManagerGroups: <Map<String, dynamic>>[
+          <String, dynamic>{'uuid': 'group-1'},
+        ],
+        groupDevicesById: <String, List<MainManagerGroupDevice>>{
+          'group-1': <MainManagerGroupDevice>[
+            MainManagerGroupDevice(
+              deviceIdentifier: 'new-device',
+              publicKey: newDeviceKeyMaterial.publicKeyB64,
+              publicKeyFingerprint: 'fp-new',
+            ),
+          ],
+        },
+      );
+
+      final DeviceRegistrationService service = DeviceRegistrationService(
+        secureStorage: FakeFlutterSecureStorage(),
+        installationIdStore: FixedInstallationIdStore('manager-device'),
+        groupContentKeyStore: groupContentKeyStore,
+      );
+
+      await service.registerManagerDeviceAndProvisionKeys(
+        managerApiService: managerApiService,
+        registrationData: DeviceRegistrationData(
+          deviceIdentifier: 'new-device',
+          memberName: 'Bob',
+          publicKey: newDeviceKeyMaterial.publicKeyB64,
+          publicKeyAlgorithm: 'x25519',
+        ),
+      );
+
+      expect(managerApiService.registerDeviceCalls, hasLength(1));
+      expect(managerApiService.registerDeviceCalls.single.deviceIdentifier, 'new-device');
+      expect(managerApiService.registerDeviceCalls.single.ownerUser, 7);
+      expect(managerApiService.addDeviceCalls, hasLength(1));
+      expect(managerApiService.addDeviceCalls.single.groupId, 'group-1');
+      expect(managerApiService.envelopeCalls, hasLength(2));
+
+      final CreateEnvelopeCall rosterCall = managerApiService.envelopeCalls
+          .firstWhere((CreateEnvelopeCall c) => c.scope == groupKeyScopeManagerRoster);
+      final CreateEnvelopeCall sharedCall = managerApiService.envelopeCalls
+          .firstWhere((CreateEnvelopeCall c) => c.scope == groupKeyScopeGroupShared);
+
+      final List<int> unwrappedRoster = await EyesOnlyCrypto.unwrapWithPrivateKey(
+        rosterCall.keyEnvelopes.single['encrypted_group_key'] as String,
+        newDeviceKeyMaterial.privateKeyBytes,
+        newDeviceKeyMaterial.publicKeyBytes,
+        groupKeyEncryptionHkdfInfo,
+      );
+      expect(unwrappedRoster, rosterKeyBytes);
+
+      final List<int> unwrappedShared = await EyesOnlyCrypto.unwrapWithPrivateKey(
+        sharedCall.keyEnvelopes.single['encrypted_group_key'] as String,
+        newDeviceKeyMaterial.privateKeyBytes,
+        newDeviceKeyMaterial.publicKeyBytes,
+        groupKeyEncryptionHkdfInfo,
+      );
+      expect(unwrappedShared, sharedKeyBytes);
+    });
+
+    test('registerManagerDeviceAndProvisionKeys skips groups with missing keys', () async {
+      final FakeGroupContentKeyStore groupContentKeyStore = FakeGroupContentKeyStore();
+      const List<int> rosterKeyBytes = <int>[
+        10, 20, 30, 40, 50, 60, 70, 80,
+        11, 21, 31, 41, 51, 61, 71, 81,
+        12, 22, 32, 42, 52, 62, 72, 82,
+        13, 23, 33, 43, 53, 63, 73, 83,
+      ];
+      const List<int> sharedKeyBytes = <int>[
+        1, 2, 3, 4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 15, 16,
+        17, 18, 19, 20, 21, 22, 23, 24,
+        25, 26, 27, 28, 29, 30, 31, 32,
+      ];
+      // group-1: both keys present → should be provisioned
+      await groupContentKeyStore.saveGroupContentKey(
+        'group-1',
+        rosterKeyBytes,
+        scope: groupKeyScopeManagerRoster,
+      );
+      await groupContentKeyStore.saveGroupContentKey(
+        'group-1',
+        sharedKeyBytes,
+        scope: groupKeyScopeGroupShared,
+      );
+      // group-2: only shared key → skipped
+      await groupContentKeyStore.saveGroupContentKey(
+        'group-2',
+        sharedKeyBytes,
+        scope: groupKeyScopeGroupShared,
+      );
+      final _KeyMaterial newDeviceKeyMaterial = await _createKeyMaterial();
+      final FakeManagerApiService managerApiService = FakeManagerApiService(
+        baseUrl: 'http://manager',
+        accessTokenValue: _jwtWithUserId(7),
+        mainManagerGroups: <Map<String, dynamic>>[
+          <String, dynamic>{'uuid': 'group-1'},
+          <String, dynamic>{'uuid': 'group-2'},
+        ],
+        groupDevicesById: <String, List<MainManagerGroupDevice>>{
+          'group-1': <MainManagerGroupDevice>[
+            MainManagerGroupDevice(
+              deviceIdentifier: 'new-device',
+              publicKey: newDeviceKeyMaterial.publicKeyB64,
+              publicKeyFingerprint: 'fp-new',
+            ),
+          ],
+        },
+      );
+
+      final DeviceRegistrationService service = DeviceRegistrationService(
+        secureStorage: FakeFlutterSecureStorage(),
+        installationIdStore: FixedInstallationIdStore('manager-device'),
+        groupContentKeyStore: groupContentKeyStore,
+      );
+
+      await service.registerManagerDeviceAndProvisionKeys(
+        managerApiService: managerApiService,
+        registrationData: DeviceRegistrationData(
+          deviceIdentifier: 'new-device',
+          memberName: 'Bob',
+          publicKey: newDeviceKeyMaterial.publicKeyB64,
+          publicKeyAlgorithm: 'x25519',
+        ),
+      );
+
+      expect(managerApiService.registerDeviceCalls, hasLength(1));
+      expect(
+        managerApiService.addDeviceCalls.map((AddDeviceCall c) => c.groupId),
+        <String>['group-1'],
+      );
+      expect(
+        managerApiService.envelopeCalls.map((CreateEnvelopeCall c) => c.groupId).toSet(),
+        <String>{'group-1'},
+      );
+      expect(managerApiService.envelopeCalls, hasLength(2));
+    });
   });
 }
 
@@ -381,12 +546,14 @@ class FakeManagerApiService extends ManagerApiService {
     required super.baseUrl,
     this.accessTokenValue,
     this.mainManagerGroups = const <Map<String, dynamic>>[],
+    this.managerDevicesList = const <MainManagerGroupDevice>[],
     Map<String, List<MainManagerGroupDevice>>? groupDevicesById,
   }) : _groupDevicesById =
            groupDevicesById ?? <String, List<MainManagerGroupDevice>>{};
 
   final String? accessTokenValue;
   final List<Map<String, dynamic>> mainManagerGroups;
+  final List<MainManagerGroupDevice> managerDevicesList;
   final Map<String, List<MainManagerGroupDevice>> _groupDevicesById;
   final List<RegisterDeviceCall> registerDeviceCalls = <RegisterDeviceCall>[];
   final List<AddDeviceCall> addDeviceCalls = <AddDeviceCall>[];
@@ -427,6 +594,11 @@ class FakeManagerApiService extends ManagerApiService {
       ),
     );
     return <String, dynamic>{};
+  }
+
+  @override
+  Future<List<MainManagerGroupDevice>> getManagerDevices() async {
+    return managerDevicesList;
   }
 
   @override

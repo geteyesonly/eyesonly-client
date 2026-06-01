@@ -13,6 +13,7 @@ class ManagerApiEndpoints {
   static const String removeDeviceFromGroup = '/main-manager/remove-device-from-group/';
   static const String managerGroups = '/manager/groups/';
   static const String managerGroupDevices = '/manager/group-devices/';
+  static const String managerDevices = '/manager/devices/';
   static const String mainManagerGroups = '/main-manager/groups/';
   static const String mainManagerGroupDevices = '/main-manager/group-devices/';
   static const String managerUploadEncryptedBlob = '/manager/upload-encrypted-blob/';

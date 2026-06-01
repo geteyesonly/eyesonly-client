@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/crypto/eyes_only_crypto.dart';
-import 'package:eyesonly/services/installation_id_store.dart';
 import 'package:eyesonly/services/manager/api_service.dart';
 import 'package:eyesonly/services/manager/group_content_key_store.dart';
 import 'package:eyesonly/services/manager/device_registration_service.dart';
@@ -42,34 +41,6 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     super.initState();
     _groupScopedMetadataCipher = GroupScopedMetadataCipher(
       groupContentKeyStore: _groupContentKeyStore,
-    );
-  }
-
-  /// Polls until the creator device appears in the manager-scoped device list,
-  /// then returns ALL manager-owned devices in the group (which the backend
-  /// auto-adds on group creation).
-  Future<List<MainManagerGroupDevice>> _waitForManagerDevicesInGroup({
-    required ManagerApiService managerApiService,
-    required String groupId,
-    required String deviceIdentifier,
-  }) async {
-    const int maxAttempts = 5;
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-      final List<MainManagerGroupDevice> devices =
-          await managerApiService.getManagerGroupDevices(groupId: groupId);
-      if (devices.any(
-        (MainManagerGroupDevice d) => d.deviceIdentifier == deviceIdentifier,
-      )) {
-        return devices;
-      }
-      if (attempt < maxAttempts) {
-        await Future<void>.delayed(Duration(milliseconds: 500 * attempt));
-      }
-    }
-
-    throw ApiException(
-      _l10n?.createGroupCreatorNotLinkedError ??
-          'Creator device was not linked to the new group.',
     );
   }
 
@@ -135,17 +106,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         );
       }
 
-      // 3. The backend auto-adds ALL devices owned by this manager account
-      // to the new group. Wait until the creator device appears, then fetch
-      // the full list so every device gets key envelopes.
-      final String deviceIdentifier =
-          await InstallationIdStore().getOrCreateInstallationId();
+      // 3. Fetch all manager-owned devices and add each one to the group.
       final List<MainManagerGroupDevice> allManagerDevices =
-          await _waitForManagerDevicesInGroup(
-        managerApiService: managerApiService,
-        groupId: groupId,
-        deviceIdentifier: deviceIdentifier,
-      );
+          await managerApiService.getManagerDevices();
 
       // Save keys locally before using them to encrypt envelopes.
       await _groupContentKeyStore.saveGroupContentKey(

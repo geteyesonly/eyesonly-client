@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:eyesonly/l10n/app_localizations.dart';
 import 'package:eyesonly/services/api_exception.dart';
 import 'package:eyesonly/services/device/api_service.dart';
-import 'package:eyesonly/screens/join_group_qr_page.dart';
 import 'package:eyesonly/services/manager/device_registration_service.dart';
 import 'package:eyesonly/services/manager/api_service.dart';
 import 'package:eyesonly/services/screen_feedback.dart';
@@ -52,47 +51,6 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _showDeviceRegistrationPrompt({
-    required String baseUrl,
-    required String organizationName,
-  }) async {
-    final bool? showQr = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            _l10n?.loginRegisterThisDeviceTitle ?? 'Register This Device',
-          ),
-          content: Text(
-            _l10n?.loginRegisterThisDeviceContent ??
-                'This device is not registered yet. On your already-registered manager device, tap "Register Manager Device" and scan the QR code shown here.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(_l10n?.loginLater ?? 'Later'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(_l10n?.loginShowQrCode ?? 'Show QR Code'),
-            ),
-          ],
-        );
-      },
-    );
-    if (showQr == true && mounted) {
-      await Navigator.push<void>(
-        context,
-        MaterialPageRoute<void>(
-          builder: (BuildContext context) => JoinGroupQrPage(
-            organizationName: organizationName,
-            apiUrl: baseUrl,
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> _submitLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -127,18 +85,11 @@ class _LoginPageState extends State<LoginPage> {
           .isCurrentDeviceRegistered(
             managerApiService: managerApiService,
           );
-      bool hasExistingManagerOwnedDevice = false;
       if (!isCurrentDeviceRegistered) {
-        hasExistingManagerOwnedDevice = await _deviceRegistrationService
-            .hasExistingManagerOwnedDevice(
-              managerApiService: managerApiService,
-            );
-        if (!hasExistingManagerOwnedDevice) {
-          await _deviceRegistrationService.ensureRegistered(
-            managerApiService: managerApiService,
-            username: username,
-          );
-        }
+        await _deviceRegistrationService.ensureRegistered(
+          managerApiService: managerApiService,
+          username: username,
+        );
       }
 
       String organizationName = baseUrl;
@@ -175,16 +126,6 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) {
         return;
-      }
-
-      if (!isCurrentDeviceRegistered && hasExistingManagerOwnedDevice) {
-        await _showDeviceRegistrationPrompt(
-          baseUrl: baseUrl,
-          organizationName: organizationName,
-        );
-        if (!mounted) {
-          return;
-        }
       }
 
       ScreenFeedback.showMessage(

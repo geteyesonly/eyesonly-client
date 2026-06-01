@@ -288,14 +288,13 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     try {
       // Lock the capture orientation to the current device orientation so the
       // JPEG is saved with correct rotation on both Android and iOS.
-      final bool isLandscape =
-          MediaQuery.orientationOf(context) == Orientation.landscape;
+      // Use the camera controller's own orientation value so all four
+      // orientations (landscapeLeft, landscapeRight, portraitUp, portraitDown)
+      // are handled correctly, including on tablets.
+      final DeviceOrientation currentOrientation =
+          controller.value.deviceOrientation;
       try {
-        await controller.lockCaptureOrientation(
-          isLandscape
-              ? DeviceOrientation.landscapeLeft
-              : DeviceOrientation.portraitUp,
-        );
+        await controller.lockCaptureOrientation(currentOrientation);
         captureOrientationLocked = true;
       } catch (_) {
         // Not all devices support lockCaptureOrientation; continue regardless.

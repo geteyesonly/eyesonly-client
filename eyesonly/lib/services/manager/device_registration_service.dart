@@ -74,6 +74,10 @@ class DeviceRegistrationService {
   GroupScopedMetadataCipher get _groupScopedMetadataCipher =>
       GroupScopedMetadataCipher(groupContentKeyStore: _groupContentKeyStore);
 
+  Future<String> getCurrentDeviceIdentifier() async {
+    return _installationIdStore.getOrCreateInstallationId();
+  }
+
   Future<bool> isCurrentDeviceRegistered({
     required ManagerApiService managerApiService,
   }) async {
@@ -100,32 +104,20 @@ class DeviceRegistrationService {
       // Device-auth check is not applicable for manager devices.
     }
 
-    // 2. If the device-auth check did not confirm registration, use the
-    //    manager API (JWT-authenticated) to search for this device across all
-    //    accessible manager groups. This covers the case where another manager
+    // 2. If the device-auth check did not confirm registration, query the
+    //    manager devices endpoint. This covers the case where another manager
     //    device registered this device externally so the local flag was never
     //    written.
     if (!serverRegistered) {
       try {
-        final List<Map<String, dynamic>> groups =
-            await managerApiService.getManagerGroups();
-        outer:
-        for (final Map<String, dynamic> group in groups) {
-          final String groupId = (group['uuid'] as String?)?.trim() ?? '';
-          if (groupId.isEmpty) {
-            continue;
-          }
-          final List<MainManagerGroupDevice> devices =
-              await managerApiService.getManagerGroupDevices(groupId: groupId);
-          for (final MainManagerGroupDevice d in devices) {
-            if (d.deviceIdentifier == managerDeviceIdentifier) {
-              serverRegistered = true;
-              break outer;
-            }
-          }
-        }
+        final List<MainManagerGroupDevice> devices =
+            await managerApiService.getManagerDevices();
+        serverRegistered = devices.any(
+          (MainManagerGroupDevice d) =>
+              d.deviceIdentifier == managerDeviceIdentifier,
+        );
       } catch (_) {
-        // Manager-API check failed; fall through to the local flag.
+        // Manager-devices endpoint check failed; fall through to the local flag.
       }
     }
 
@@ -156,28 +148,13 @@ class DeviceRegistrationService {
   }) async {
     final String currentDeviceIdentifier =
         await _installationIdStore.getOrCreateInstallationId();
-    final List<Map<String, dynamic>> managerGroups =
-        await managerApiService.getManagerGroups();
-
-    for (final Map<String, dynamic> group in managerGroups) {
-      final String groupId = (group['uuid'] as String?)?.trim() ?? '';
-      if (groupId.isEmpty) {
-        continue;
-      }
-
-      final List<MainManagerGroupDevice> devices =
-          await managerApiService.getManagerGroupDevices(groupId: groupId);
-      final bool hasOtherDevice = devices.any(
-        (MainManagerGroupDevice device) =>
-            device.deviceIdentifier.trim().isNotEmpty &&
-            device.deviceIdentifier != currentDeviceIdentifier,
-      );
-      if (hasOtherDevice) {
-        return true;
-      }
-    }
-
-    return false;
+    final List<MainManagerGroupDevice> devices =
+        await managerApiService.getManagerDevices();
+    return devices.any(
+      (MainManagerGroupDevice d) =>
+          d.deviceIdentifier.trim().isNotEmpty &&
+          d.deviceIdentifier != currentDeviceIdentifier,
+    );
   }
 
   Future<void> ensureRegistered({
@@ -415,6 +392,93 @@ class DeviceRegistrationService {
       publicKeyAlgorithm: registrationData.publicKeyAlgorithm,
       ownerUser: ownerUserId,
     );
+
+    // Add the newly registered device to all main-manager groups where this
+    // device holds the necessary group keys, provisioning encrypted key
+    // envelopes for both the roster and shared scopes.
+    final List<Map<String, dynamic>> mainManagerGroups =
+        await managerApiService.getMainManagerGroups();
+    for (final Map<String, dynamic> group in mainManagerGroups) {
+      final String groupId = (group['uuid'] as String?)?.trim() ?? '';
+      if (groupId.isEmpty) {
+        continue;
+      }
+
+      final List<int>? rosterKeyBytes =
+          await _groupContentKeyStore.readGroupContentKey(
+        groupId,
+        scope: groupKeyScopeManagerRoster,
+      );
+      final List<int>? sharedKeyBytes =
+          await _groupContentKeyStore.readGroupContentKey(
+        groupId,
+        scope: groupKeyScopeGroupShared,
+      );
+      if (rosterKeyBytes == null || sharedKeyBytes == null) {
+        continue;
+      }
+
+      final String encryptedMemberName =
+          await _groupScopedMetadataCipher.encryptForGroup(
+        groupId: groupId,
+        scope: groupKeyScopeManagerRoster,
+        plaintext: registrationData.memberName,
+      );
+      await managerApiService.addDeviceToGroup(
+        deviceIdentifier: registrationData.deviceIdentifier,
+        groupId: groupId,
+        encryptedMemberName: encryptedMemberName,
+        isManager: true,
+      );
+
+      final MainManagerGroupDevice deviceRecord = await _waitForDeviceInGroup(
+        managerApiService: managerApiService,
+        groupId: groupId,
+        deviceIdentifier: registrationData.deviceIdentifier,
+      );
+      final String resolvedFingerprint =
+          deviceRecord.publicKeyFingerprint.trim().isNotEmpty
+              ? deviceRecord.publicKeyFingerprint.trim()
+              : await EyesOnlyCrypto.publicKeyFingerprint(
+                  registrationData.publicKey,
+                );
+
+      final String encryptedRosterKey = await EyesOnlyCrypto.wrapForPublicKey(
+        rosterKeyBytes,
+        registrationData.publicKey,
+        groupKeyEncryptionHkdfInfo,
+      );
+      await managerApiService.createGroupKeyEnvelope(
+        groupId: groupId,
+        scope: groupKeyScopeManagerRoster,
+        keyEnvelopes: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'recipient_device_identifier': registrationData.deviceIdentifier,
+            'key_wrap_algorithm': EyesOnlyCrypto.asymmetricAlgorithm,
+            'recipient_key_fingerprint': resolvedFingerprint,
+            'encrypted_group_key': encryptedRosterKey,
+          },
+        ],
+      );
+
+      final String encryptedSharedKey = await EyesOnlyCrypto.wrapForPublicKey(
+        sharedKeyBytes,
+        registrationData.publicKey,
+        groupKeyEncryptionHkdfInfo,
+      );
+      await managerApiService.createGroupKeyEnvelope(
+        groupId: groupId,
+        scope: groupKeyScopeGroupShared,
+        keyEnvelopes: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'recipient_device_identifier': registrationData.deviceIdentifier,
+            'key_wrap_algorithm': EyesOnlyCrypto.asymmetricAlgorithm,
+            'recipient_key_fingerprint': resolvedFingerprint,
+            'encrypted_group_key': encryptedSharedKey,
+          },
+        ],
+      );
+    }
   }
 
   Future<void> addExternalManagerDeviceToGroup({

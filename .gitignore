@@ -13,3 +13,7 @@ Thumbs.db
 # Secrets — never commit these
 .env
 .env.*
+eyesonly/android/key.properties
+*.jks
+*.keystore
+eyesonly/keystore/

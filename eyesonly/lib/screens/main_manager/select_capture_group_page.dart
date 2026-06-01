@@ -103,13 +103,33 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
           })
           .toList();
 
+      final String currentDeviceId =
+          await _deviceRegistrationService.getCurrentDeviceIdentifier();
+
+      final List<List<MainManagerGroupDevice>> groupDeviceLists =
+          await Future.wait(
+            allowedGroups.map(
+              (_CaptureGroupSource group) =>
+                  _managerApiService.getManagerGroupDevices(groupId: group.id),
+            ),
+          );
+
+      final List<_CaptureGroupSource> deviceGroups = <_CaptureGroupSource>[
+        for (int i = 0; i < allowedGroups.length; i++)
+          if (groupDeviceLists[i].any(
+            (MainManagerGroupDevice d) =>
+                d.deviceIdentifier.trim() == currentDeviceId.trim(),
+          ))
+            allowedGroups[i],
+      ];
+
       await _groupDisplayService.syncGroupKeysFromDeviceEndpoint(
         baseUrl: widget.baseUrl,
-        groupIds: allowedGroups.map((_CaptureGroupSource group) => group.id),
+        groupIds: deviceGroups.map((_CaptureGroupSource group) => group.id),
       );
 
       final List<_CaptureGroupEntry> groups = <_CaptureGroupEntry>[];
-      for (final _CaptureGroupSource group in allowedGroups) {
+      for (final _CaptureGroupSource group in deviceGroups) {
         final String groupId = group.id.trim();
         if (groupId.isEmpty) {
           continue;

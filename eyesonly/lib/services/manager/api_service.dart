@@ -505,6 +505,35 @@ class ManagerApiService {
     );
   }
 
+  Future<List<MainManagerGroupDevice>> getManagerDevices() async {
+    final http.Response response = await _sendWithRefreshRetry(
+      () => _client.get(
+        _uri(ManagerApiEndpoints.managerDevices),
+        headers: _headers(),
+      ),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        'Failed to fetch manager devices',
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      );
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is List) {
+      return decoded
+          .whereType<Map<String, dynamic>>()
+          .map(MainManagerGroupDevice.fromJson)
+          .toList();
+    }
+    throw ApiException(
+      'Expected a JSON list response for manager devices',
+      responseBody: response.body,
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getMainManagerGroups() async {
     final http.Response response = await _sendWithRefreshRetry(
       () => _client.get(

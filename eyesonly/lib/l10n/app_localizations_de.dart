@@ -105,7 +105,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsImageCacheDeleted => 'Bild-Cache gelöscht.';
 
   @override
-  String get settingsImageCacheDeleteFailed => 'Bild-Cache konnte nicht gelöscht werden.';
+  String get settingsImageCacheDeleteFailed =>
+      'Bild-Cache konnte nicht gelöscht werden.';
 
   @override
   String get settingsAddOrgFirst => 'Füge zuerst eine Organisation hinzu.';
@@ -129,13 +130,15 @@ class AppLocalizationsDe extends AppLocalizations {
       'Gerätesperre wurde nicht aktiviert.';
 
   @override
-  String get settingsPushNotificationsFailed => 'Push-Benachrichtigungen konnten nicht aktualisiert werden.';
+  String get settingsPushNotificationsFailed =>
+      'Push-Benachrichtigungen konnten nicht aktualisiert werden.';
 
   @override
   String get settingsAppVersionValue => '1.0.0';
 
   @override
-  String get unexpectedErrorOccurred => 'Ein unerwarteter Fehler ist aufgetreten.';
+  String get unexpectedErrorOccurred =>
+      'Ein unerwarteter Fehler ist aufgetreten.';
 
   @override
   String get appTitle => 'Eyes Only';

@@ -180,6 +180,63 @@ void main() {
     );
 
     testWidgets(
+      'retries auth only once per pause-resume cycle while locked',
+      (WidgetTester tester) async {
+        int authCall = 0;
+
+        await tester.pumpWidget(
+          MyApp(
+            initialSettings: const AppSettings(
+              managerModeEnabled: false,
+              useBiometricLock: true,
+              pushNotificationsEnabled: true,
+              darkMode: false,
+              managerServerURL: null,
+              lastLoggedInUsername: null,
+              deviceServerURLs: <String>[],
+              organizations: <AppOrganization>[],
+            ),
+            deviceSupportChecker: () async => true,
+            deviceAuthenticator: () {
+              authCall += 1;
+              if (authCall < 3) {
+                return Future<bool>.value(false);
+              }
+              return Future<bool>.value(true);
+            },
+            home: const Scaffold(body: Text('home')),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump();
+        expect(authCall, 1);
+        expect(find.text('Eyes Only is locked'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pumpAndSettle();
+
+        expect(authCall, 2);
+        expect(find.text('Eyes Only is locked'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pumpAndSettle();
+
+        expect(authCall, 2);
+        expect(find.text('Eyes Only is locked'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pumpAndSettle();
+
+        expect(authCall, 3);
+        expect(find.text('Eyes Only is locked'), findsNothing);
+        expect(find.text('home'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'does not re-trigger auth on resume when already unlocked',
       (WidgetTester tester) async {
         int authCalls = 0;
@@ -534,9 +591,18 @@ void main() {
             'status': 'viewer',
           },
         ],
+        managerOwnedDevicesByGroup: <String, List<MainManagerGroupDevice>>{
+          'group-1': <MainManagerGroupDevice>[
+            const MainManagerGroupDevice(
+              deviceIdentifier: 'device-1',
+              publicKey: 'pk',
+              publicKeyFingerprint: 'fp',
+            ),
+          ],
+        },
       );
       final FakeDeviceRegistrationService registrationService =
-          FakeDeviceRegistrationService();
+          FakeDeviceRegistrationService(deviceIdentifier: 'device-1');
       final List<String> selected = <String>[];
 
       await tester.pumpWidget(
@@ -595,7 +661,7 @@ void main() {
   });
 
   group('LoginPage', () {
-    testWidgets('prompts instead of auto-registering an unregistered manager device', (
+    testWidgets('auto-registers an unregistered manager device even when other devices exist', (
       WidgetTester tester,
     ) async {
       final FakeSettingsStore settingsStore = FakeSettingsStore(
@@ -640,10 +706,10 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Log In'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Register This Device'), findsOneWidget);
+      expect(find.text('Register This Device'), findsNothing);
       expect(registrationService.isCurrentDeviceRegisteredCalls, 1);
-      expect(registrationService.hasExistingManagerOwnedDeviceCalls, 1);
-      expect(registrationService.ensureRegisteredCalls, 0);
+      expect(registrationService.hasExistingManagerOwnedDeviceCalls, 0);
+      expect(registrationService.ensureRegisteredCalls, 1);
       expect(registrationService.ensureCurrentDeviceAddedCalls, 0);
       expect(managerApiService.loginCalls, 1);
     });
@@ -695,7 +761,7 @@ void main() {
 
       expect(find.text('Register This Device'), findsNothing);
       expect(registrationService.ensureRegisteredCalls, 1);
-      expect(registrationService.hasExistingManagerOwnedDeviceCalls, 1);
+      expect(registrationService.hasExistingManagerOwnedDeviceCalls, 0);
       expect(managerApiService.loginCalls, 1);
     });
   });
@@ -896,8 +962,10 @@ class FakeDeviceRegistrationService extends DeviceRegistrationService {
   FakeDeviceRegistrationService({
     this.isCurrentDeviceRegisteredValue = true,
     this.hasExistingManagerOwnedDeviceValue = false,
+    this.deviceIdentifier = 'device-1',
   });
 
+  final String deviceIdentifier;
   int ensureRegisteredCalls = 0;
   int ensureCurrentDeviceAddedCalls = 0;
   int isCurrentDeviceRegisteredCalls = 0;
@@ -936,6 +1004,11 @@ class FakeDeviceRegistrationService extends DeviceRegistrationService {
   }) async {
     hasExistingManagerOwnedDeviceCalls += 1;
     return hasExistingManagerOwnedDeviceValue;
+  }
+
+  @override
+  Future<String> getCurrentDeviceIdentifier() async {
+    return deviceIdentifier;
   }
 
   @override

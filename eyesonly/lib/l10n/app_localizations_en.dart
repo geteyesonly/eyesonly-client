@@ -126,7 +126,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeviceLockNotEnabled => 'Device lock was not enabled.';
 
   @override
-  String get settingsPushNotificationsFailed => 'Could not update push notifications.';
+  String get settingsPushNotificationsFailed =>
+      'Could not update push notifications.';
 
   @override
   String get settingsAppVersionValue => '1.0.0';

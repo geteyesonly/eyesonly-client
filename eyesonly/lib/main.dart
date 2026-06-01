@@ -16,6 +16,11 @@ import 'package:screen_protector/screen_protector.dart';
 typedef DeviceSupportChecker = Future<bool> Function();
 typedef DeviceAuthenticator = Future<bool> Function();
 
+const bool _allowStoreScreenshots = bool.fromEnvironment(
+  'ALLOW_STORE_SCREENSHOTS',
+  defaultValue: false,
+);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _enableScreenProtection();
@@ -33,7 +38,7 @@ Future<void> main() async {
 }
 
 Future<void> _enableScreenProtection() async {
-  if (kIsWeb) {
+  if (kIsWeb || _allowStoreScreenshots) {
     return;
   }
 
@@ -82,6 +87,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _isLocked = false;
   bool _isAuthenticating = false;
   bool _isScreenCaptureActive = false;
+  bool _shouldRetryUnlockOnResume = false;
   String? _lockMessage;
   DateTime? _ignoreLifecycleUntil;
 
@@ -148,10 +154,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final DateTime? ignoreLifecycleUntil = _ignoreLifecycleUntil;
-    if (!_useBiometricLock || _isAuthenticating) {
+    if (!_useBiometricLock) {
       return;
     }
+
+    final DateTime? ignoreLifecycleUntil = _ignoreLifecycleUntil;
 
     final bool shouldIgnoreLifecycleEvent =
         ignoreLifecycleUntil != null &&
@@ -159,26 +166,31 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      if (shouldIgnoreLifecycleEvent) {
+      if (_isAuthenticating || shouldIgnoreLifecycleEvent) {
         return;
       }
       if (mounted) {
         setState(() {
           _isLocked = true;
           _lockMessage = null;
+          _shouldRetryUnlockOnResume = true;
         });
       }
       return;
     }
 
-    // When the app returns to the foreground while locked, re-trigger auth
-    // automatically. This handles the device-credential fallback race in the
-    // local_auth Android plugin: BiometricPrompt.ERROR_CANCELED can fire before
-    // onActivityPaused sets activityPaused=true, causing authenticate() to
-    // return false while the full-screen PIN activity is still open. When the
-    // credential activity closes and Flutter resumes, we detect the locked state
-    // and retry so the user is not permanently stuck on the lock screen.
-    if (state == AppLifecycleState.resumed && _isLocked && !shouldIgnoreLifecycleEvent) {
+    if (_isAuthenticating) {
+      return;
+    }
+
+    // Retry once when the app resumes after a real pause/hidden transition
+    // while still locked. This keeps the Android credential-fallback race
+    // workaround, but avoids re-triggering unlock on every resumed event.
+    if (state == AppLifecycleState.resumed &&
+        _isLocked &&
+        _shouldRetryUnlockOnResume &&
+        !shouldIgnoreLifecycleEvent) {
+      _shouldRetryUnlockOnResume = false;
       _unlockApp();
     }
   }
@@ -198,6 +210,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (!_useBiometricLock) {
         _isLocked = false;
         _lockMessage = null;
+        _shouldRetryUnlockOnResume = false;
       } else if (!hadBiometricLock) {
         _isLocked = true;
       }
@@ -216,6 +229,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     setState(() {
       _isAuthenticating = true;
       _lockMessage = null;
+      _shouldRetryUnlockOnResume = false;
     });
 
     final l10n = AppLocalizations.of(context);
@@ -250,6 +264,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       setState(() {
         _isLocked = !didAuthenticate;
         _lockMessage = didAuthenticate ? null : l10n?.lockUnlockRequired ?? 'Unlock required.';
+        if (didAuthenticate) {
+          _shouldRetryUnlockOnResume = false;
+        }
       });
       if (didAuthenticate) {
         _unlockEvents.value = _unlockEvents.value + 1;

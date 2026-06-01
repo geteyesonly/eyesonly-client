@@ -147,6 +147,45 @@ paths:
           description: Authentication credentials were not provided.
       tags:
       - api
+  /api/manager/devices/:
+    get:
+      operationId: getManagerDevices
+      description: ''
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    device_identifier:
+                      type: string
+                      maxLength: 255
+                    owner_user:
+                      type: integer
+                      readOnly: true
+                    public_key:
+                      type: string
+                    public_key_algorithm:
+                      type: string
+                      maxLength: 32
+                    public_key_fingerprint:
+                      type: string
+                      maxLength: 64
+                  required:
+                  - device_identifier
+                  - public_key
+                  - public_key_fingerprint
+          description: All registered devices owned by manager accounts.
+        '401':
+          description: Authentication credentials were not provided.
+        '403':
+          description: Only managers can perform this action.
+      tags:
+      - api
   /api/manager/group-devices/:
     get:
       operationId: getManagerGroupDevices
