@@ -18,6 +18,10 @@ const String apiRoot = String.fromEnvironment(
   'EYESONLY_TEST_API_ROOT',
   defaultValue: 'http://localhost:8080/api/',
 );
+const bool enableApiIntegrationTests = bool.fromEnvironment(
+  'EYESONLY_TEST_ENABLE_API_TESTS',
+  defaultValue: false,
+);
 const String managerUsername = String.fromEnvironment(
   'EYESONLY_TEST_MANAGER_USERNAME',
   defaultValue: '',
@@ -31,7 +35,18 @@ const bool enableMutationTests = bool.fromEnvironment(
   defaultValue: false,
 );
 
+String? get apiIntegrationSkipReason {
+  if (!enableApiIntegrationTests) {
+    return 'Set EYESONLY_TEST_ENABLE_API_TESTS=true to run live API endpoint tests.';
+  }
+  return null;
+}
+
 String? get managerAuthSkipReason {
+  final String? apiSkipReason = apiIntegrationSkipReason;
+  if (apiSkipReason != null) {
+    return apiSkipReason;
+  }
   if (managerUsername.trim().isEmpty || managerPassword.trim().isEmpty) {
     return 'Set EYESONLY_TEST_MANAGER_USERNAME and EYESONLY_TEST_MANAGER_PASSWORD.';
   }

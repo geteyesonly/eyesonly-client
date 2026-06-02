@@ -25,7 +25,7 @@ void main() {
     final Map<String, dynamic> body = decodeObject(response);
     expect(body['status'], 'ok');
     expect(body['organization'], anyOf(isNull, isA<String>()));
-  });
+  }, skip: apiIntegrationSkipReason);
 
   test(
     'manager auth endpoints login, refresh, and logout work',
