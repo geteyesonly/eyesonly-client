@@ -78,8 +78,8 @@ class PushNotificationsService {
       );
     }
 
+    await _setMessagingAutoInitEnabled(true);
     await initializeMessageHandling();
-    await _ensureFirebaseInitialized();
     await _requestSystemNotificationPermissions();
 
     final FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -125,6 +125,12 @@ class PushNotificationsService {
       );
     }
 
+    try {
+      await _setMessagingAutoInitEnabled(false);
+    } catch (_) {
+      // Best-effort local opt-out; still proceed with server deregistration.
+    }
+
     Object? lastError;
     for (final String baseUrl in normalizedBaseUrls) {
       try {
@@ -168,6 +174,13 @@ class PushNotificationsService {
     String? fallbackBaseUrl,
   }) async {
     if (!pushNotificationsEnabled) {
+      return;
+    }
+
+    try {
+      await _setMessagingAutoInitEnabled(true);
+    } catch (_) {
+      // Firebase might not be configured yet. Startup should not fail for this.
       return;
     }
 
@@ -284,6 +297,20 @@ class PushNotificationsService {
       return true;
     }
     return Platform.isIOS || Platform.isMacOS;
+  }
+
+  Future<void> _setMessagingAutoInitEnabled(bool enabled) async {
+    await _ensureFirebaseInitialized();
+
+    try {
+      await FirebaseMessaging.instance.setAutoInitEnabled(enabled);
+    } catch (_) {
+      throw ApiException(
+        enabled
+            ? 'Push notifications are not available on this device yet. Please try again.'
+            : 'Could not fully disable push notifications on this device.',
+      );
+    }
   }
 
   Future<void> _ensureFirebaseInitialized() async {

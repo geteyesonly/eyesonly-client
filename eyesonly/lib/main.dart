@@ -26,14 +26,16 @@ Future<void> main() async {
   await _enableScreenProtection();
   await InstallationIdStore().getOrCreateInstallationId();
   final AppSettings settings = await SettingsStore().load();
-  await PushNotificationsService().initializeMessageHandling();
-  await PushNotificationsService().syncTokenOnAppStart(
-    pushNotificationsEnabled: settings.pushNotificationsEnabled,
-    baseUrls: settings.organizations.map(
-      (AppOrganization organization) => organization.apiUrl,
-    ),
-    fallbackBaseUrl: settings.managerServerURL,
-  );
+  if (settings.pushNotificationsEnabled) {
+    await PushNotificationsService().initializeMessageHandling();
+    await PushNotificationsService().syncTokenOnAppStart(
+      pushNotificationsEnabled: settings.pushNotificationsEnabled,
+      baseUrls: settings.organizations.map(
+        (AppOrganization organization) => organization.apiUrl,
+      ),
+      fallbackBaseUrl: settings.managerServerURL,
+    );
+  }
   runApp(MyApp(initialSettings: settings));
 }
 
