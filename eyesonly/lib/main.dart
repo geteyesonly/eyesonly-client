@@ -27,13 +27,19 @@ Future<void> main() async {
   await InstallationIdStore().getOrCreateInstallationId();
   final AppSettings settings = await SettingsStore().load();
   if (settings.pushNotificationsEnabled) {
+    // Initialize message handling synchronously so background message handler
+    // is registered before the app UI starts, but defer the token sync so it
+    // does not block runApp() — getAPNSToken() can hang indefinitely on iOS
+    // cold starts (after the app is killed and relaunched).
     await PushNotificationsService().initializeMessageHandling();
-    await PushNotificationsService().syncTokenOnAppStart(
-      pushNotificationsEnabled: settings.pushNotificationsEnabled,
-      baseUrls: settings.organizations.map(
-        (AppOrganization organization) => organization.apiUrl,
+    unawaited(
+      PushNotificationsService().syncTokenOnAppStart(
+        pushNotificationsEnabled: settings.pushNotificationsEnabled,
+        baseUrls: settings.organizations.map(
+          (AppOrganization organization) => organization.apiUrl,
+        ),
+        fallbackBaseUrl: settings.managerServerURL,
       ),
-      fallbackBaseUrl: settings.managerServerURL,
     );
   }
   runApp(MyApp(initialSettings: settings));
@@ -304,6 +310,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MaterialApp(
       onGenerateTitle: (BuildContext context) =>
           AppLocalizations.of(context)!.appTitle,
+      debugShowCheckedModeBanner: false,
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

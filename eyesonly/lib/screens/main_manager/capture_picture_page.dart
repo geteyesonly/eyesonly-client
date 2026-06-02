@@ -37,6 +37,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
   String? _cameraErrorMessage;
   CameraLensDirection _activeLensDirection = CameraLensDirection.back;
   FlashMode _flashMode = FlashMode.off;
+  bool _isFlashSupported = true;
   Offset? _focusIndicatorPosition;
   double _minZoomLevel = 1.0;
   double _maxZoomLevel = 1.0;
@@ -122,7 +123,13 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
     await controller.initialize();
-    await controller.setFlashMode(_flashMode);
+    bool flashSupported = true;
+    try {
+      await controller.setFlashMode(_flashMode);
+    } catch (_) {
+      // This camera has no flash hardware (e.g. iPad rear camera).
+      flashSupported = false;
+    }
     await _initializeZoomBounds(controller);
 
     if (!mounted) {
@@ -133,6 +140,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     setState(() {
       _cameraController = controller;
       _activeLensDirection = camera.lensDirection;
+      _isFlashSupported = flashSupported;
       _isInitializingCamera = false;
     });
   }
@@ -227,6 +235,9 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     setState(() {
       _isInitializingCamera = true;
       _cameraErrorMessage = null;
+      // Persist the user's intent so Retry targets the same lens even if
+      // attaching this camera fails.
+      _activeLensDirection = nextDirection;
     });
 
     try {
@@ -587,7 +598,7 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
                       radius: 28,
                       backgroundColor: Colors.black54,
                       child: IconButton(
-                        onPressed: _toggleFlashMode,
+                        onPressed: _isFlashSupported ? _toggleFlashMode : null,
                         icon: Icon(_flashIcon(), color: Colors.white),
                         tooltip: _flashLabel(),
                       ),
