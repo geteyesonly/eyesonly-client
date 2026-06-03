@@ -57,16 +57,29 @@ class _SelectCaptureGroupPageState extends State<SelectCaptureGroupPage> {
   }
 
   Future<void> _redirectToLoginForExpiredSession() async {
+    if (!mounted) {
+      return;
+    }
+    final bool? didLogIn = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (BuildContext context) => const LoginPage(),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (didLogIn == true) {
+      await _loadGroups();
+      return;
+    }
+
     await _settingsStore.saveLastLoggedInUsername(null);
     if (!mounted) {
       return;
     }
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) => const LoginPage(),
-      ),
-      (Route<dynamic> route) => route.isFirst,
-    );
+    Navigator.of(context).pop();
   }
 
   @override

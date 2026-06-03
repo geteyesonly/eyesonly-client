@@ -146,17 +146,21 @@ class _SendCapturedPicturePageState extends State<SendCapturedPicturePage> {
   }
 
   Future<void> _redirectToLoginForExpiredSession(ApiException error) async {
-    await _settingsStore.saveLastLoggedInUsername(null);
     if (!mounted) {
       return;
     }
     ScreenFeedback.showError(context, error);
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
+    final bool? didLogIn = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (BuildContext context) => const LoginPage(),
       ),
-      (Route<dynamic> route) => route.isFirst,
     );
+
+    if (!mounted || didLogIn == true) {
+      return;
+    }
+
+    await _settingsStore.saveLastLoggedInUsername(null);
   }
 
   @override

@@ -83,12 +83,16 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
     });
 
     try {
-      final AppLocalizations? l10n = AppLocalizations.of(context);
-      final String noCameraMessage =
-          l10n?.captureNoCameraAvailable ?? 'No camera available.';
       final List<CameraDescription> cameras = await availableCameras();
       if (cameras.isEmpty) {
-        throw StateError(noCameraMessage);
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _cameraErrorMessage = AppLocalizations.of(context)?.captureNoCameraAvailable ?? 'No camera available.';
+          _isInitializingCamera = false;
+        });
+        return;
       }
 
       _availableCameras = cameras;
@@ -130,7 +134,16 @@ class _CapturePicturePageState extends State<CapturePicturePage> {
       // This camera has no flash hardware (e.g. iPad rear camera).
       flashSupported = false;
     }
-    await _initializeZoomBounds(controller);
+    try {
+      await _initializeZoomBounds(controller);
+    } catch (_) {
+      // Some simulator/device configurations (e.g. iPhone 16 Pro Max simulator)
+      // do not fully implement the zoom range APIs. Fall back to fixed 1.0×.
+      _minZoomLevel = 1.0;
+      _maxZoomLevel = 1.0;
+      _currentZoomLevel = 1.0;
+      _baseZoomLevel = 1.0;
+    }
 
     if (!mounted) {
       await controller.dispose();
