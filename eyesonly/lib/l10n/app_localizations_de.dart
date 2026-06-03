@@ -820,6 +820,21 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get groupDetailEditGroupNameTooltip => 'Gruppennamen bearbeiten';
+
+  @override
+  String get groupDetailRenameGroupTitle => 'Gruppe umbenennen';
+
+  @override
+  String get groupDetailGroupNameLabel => 'Gruppenname';
+
+  @override
+  String get groupDetailSaveAction => 'Speichern';
+
+  @override
+  String get groupDetailRenamed => 'Gruppe umbenannt.';
+
+  @override
   String get groupsRefreshTooltip => 'Aktualisieren';
 
   @override

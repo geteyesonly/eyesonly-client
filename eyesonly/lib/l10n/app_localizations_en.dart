@@ -810,6 +810,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get groupDetailEditGroupNameTooltip => 'Edit group name';
+
+  @override
+  String get groupDetailRenameGroupTitle => 'Rename group';
+
+  @override
+  String get groupDetailGroupNameLabel => 'Group name';
+
+  @override
+  String get groupDetailSaveAction => 'Save';
+
+  @override
+  String get groupDetailRenamed => 'Group renamed.';
+
+  @override
   String get groupsRefreshTooltip => 'Refresh';
 
   @override

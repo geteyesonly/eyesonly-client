@@ -351,6 +351,11 @@
       }
     }
   },
+  "groupDetailEditGroupNameTooltip": "Edit group name",
+  "groupDetailRenameGroupTitle": "Rename group",
+  "groupDetailGroupNameLabel": "Group name",
+  "groupDetailSaveAction": "Save",
+  "groupDetailRenamed": "Group renamed.",
   "groupsRefreshTooltip": "Refresh",
   "groupDetailAddMember": "Add Member",
   "groupDetailShowInstallationIdentifiers": "Show installation identifiers",

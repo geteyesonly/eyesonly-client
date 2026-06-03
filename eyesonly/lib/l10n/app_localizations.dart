@@ -1517,6 +1517,36 @@ abstract class AppLocalizations {
     int skippedCount,
   );
 
+  /// No description provided for @groupDetailEditGroupNameTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit group name'**
+  String get groupDetailEditGroupNameTooltip;
+
+  /// No description provided for @groupDetailRenameGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename group'**
+  String get groupDetailRenameGroupTitle;
+
+  /// No description provided for @groupDetailGroupNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group name'**
+  String get groupDetailGroupNameLabel;
+
+  /// No description provided for @groupDetailSaveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get groupDetailSaveAction;
+
+  /// No description provided for @groupDetailRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Group renamed.'**
+  String get groupDetailRenamed;
+
   /// No description provided for @groupsRefreshTooltip.
   ///
   /// In en, this message translates to:
