@@ -145,6 +145,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockNoAuthAvailable => 'No device authentication is available.';
 
   @override
+  String get lockNoAuthConfiguredMessage =>
+      'No screen lock is configured on this device. Set up a PIN, pattern, fingerprint, or face unlock in your device settings to use Eyes Only.';
+
+  @override
+  String get lockSetUpScreenLock => 'Set Up Screen Lock';
+
+  @override
   String get lockUnlockRequired => 'Unlock required to continue.';
 
   @override

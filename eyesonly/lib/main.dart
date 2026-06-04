@@ -85,6 +85,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   static const Duration _postUnlockLifecycleGrace = Duration(seconds: 10);
+  static const MethodChannel _systemChannel =
+      MethodChannel('com.eyesonlyapp.app/system');
 
   final LocalAuthentication _localAuthentication = LocalAuthentication();
   final ValueNotifier<int> _unlockEvents = ValueNotifier<int>(0);
@@ -94,6 +96,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late bool _useBiometricLock;
   bool _isLocked = false;
   bool _isAuthenticating = false;
+  bool _noAuthConfigured = false;
   bool _isScreenCaptureActive = false;
   bool _shouldRetryUnlockOnResume = false;
   String? _lockMessage;
@@ -181,6 +184,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         setState(() {
           _isLocked = true;
           _lockMessage = null;
+          _noAuthConfigured = false;
           _shouldRetryUnlockOnResume = true;
         });
       }
@@ -218,6 +222,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (!_useBiometricLock) {
         _isLocked = false;
         _lockMessage = null;
+        _noAuthConfigured = false;
         _shouldRetryUnlockOnResume = false;
       } else if (!hadBiometricLock) {
         _isLocked = true;
@@ -229,6 +234,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _openSecuritySettings() async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    try {
+      await _systemChannel.invokeMethod<void>('openSecuritySettings');
+    } on PlatformException {
+      // Ignore if not supported on this device.
+    }
+  }
+
   Future<void> _unlockApp() async {
     if (!_useBiometricLock || _isAuthenticating) {
       return;
@@ -237,6 +253,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     setState(() {
       _isAuthenticating = true;
       _lockMessage = null;
+      _noAuthConfigured = false;
       _shouldRetryUnlockOnResume = false;
     });
 
@@ -251,7 +268,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         }
         setState(() {
           _isLocked = true;
-          _lockMessage = l10n?.lockNoAuthAvailable ?? 'No authentication available.';
+          _noAuthConfigured = true;
+          _lockMessage = l10n?.lockNoAuthConfiguredMessage ??
+              'No screen lock is configured on this device.';
         });
         return;
       }
@@ -342,7 +361,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               _AppLockOverlay(
                 isAuthenticating: _isAuthenticating,
                 message: _lockMessage,
+                noAuthConfigured: _noAuthConfigured,
                 onUnlockPressed: _unlockApp,
+                onConfigureSecurityPressed: _openSecuritySettings,
               ),
           ],
         );
@@ -387,16 +408,22 @@ class _AppLockOverlay extends StatelessWidget {
   const _AppLockOverlay({
     required this.isAuthenticating,
     required this.message,
+    required this.noAuthConfigured,
     required this.onUnlockPressed,
+    required this.onConfigureSecurityPressed,
   });
 
   final bool isAuthenticating;
   final String? message;
+  final bool noAuthConfigured;
   final Future<void> Function() onUnlockPressed;
+  final Future<void> Function() onConfigureSecurityPressed;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context)!;
+    final bool showSetupButton =
+        noAuthConfigured && defaultTargetPlatform == TargetPlatform.android;
 
     return Positioned.fill(
       child: ColoredBox(
@@ -426,19 +453,34 @@ class _AppLockOverlay extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: isAuthenticating ? null : onUnlockPressed,
-                    icon: isAuthenticating
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.fingerprint),
-                    label: Text(
-                      isAuthenticating ? l10n.unlocking : l10n.unlock,
+                  if (showSetupButton) ...<Widget>[
+                    FilledButton.icon(
+                      onPressed: onConfigureSecurityPressed,
+                      icon: const Icon(Icons.security),
+                      label: Text(l10n.lockSetUpScreenLock),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: isAuthenticating ? null : onUnlockPressed,
+                      icon: const Icon(Icons.fingerprint),
+                      label: Text(
+                        isAuthenticating ? l10n.unlocking : l10n.unlock,
+                      ),
+                    ),
+                  ] else
+                    FilledButton.icon(
+                      onPressed: isAuthenticating ? null : onUnlockPressed,
+                      icon: isAuthenticating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.fingerprint),
+                      label: Text(
+                        isAuthenticating ? l10n.unlocking : l10n.unlock,
+                      ),
+                    ),
                 ],
               ),
             ),

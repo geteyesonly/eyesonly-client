@@ -150,6 +150,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get lockNoAuthAvailable => 'Keine Geräteauthentifizierung verfügbar.';
 
   @override
+  String get lockNoAuthConfiguredMessage =>
+      'Auf diesem Gerät ist keine Bildschirmsperre eingerichtet. Richte in den Geräteeinstellungen eine PIN, ein Muster, einen Fingerabdruck oder Gesichtserkennung ein, um Eyes Only zu nutzen.';
+
+  @override
+  String get lockSetUpScreenLock => 'Bildschirmsperre einrichten';
+
+  @override
   String get lockUnlockRequired => 'Zum Fortfahren entsperren.';
 
   @override

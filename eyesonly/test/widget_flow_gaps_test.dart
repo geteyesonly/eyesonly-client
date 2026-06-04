@@ -304,7 +304,8 @@ void main() {
       expect(find.text('Eyes Only is locked'), findsOneWidget);
       final bool hasExpectedUnsupportedMessage =
           find.text('No device authentication is available.').evaluate().isNotEmpty ||
-          find.text('No authentication available.').evaluate().isNotEmpty;
+          find.text('No authentication available.').evaluate().isNotEmpty ||
+          find.textContaining('No screen lock is configured').evaluate().isNotEmpty;
       expect(hasExpectedUnsupportedMessage, isTrue);
     });
   });

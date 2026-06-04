@@ -48,6 +48,8 @@
   "appTitle": "Eyes Only",
   "unlockReason": "Eyes Only entsperren",
   "lockNoAuthAvailable": "Keine Geräteauthentifizierung verfügbar.",
+  "lockNoAuthConfiguredMessage": "Auf diesem Gerät ist keine Bildschirmsperre eingerichtet. Richte in den Geräteeinstellungen eine PIN, ein Muster, einen Fingerabdruck oder Gesichtserkennung ein, um Eyes Only zu nutzen.",
+  "lockSetUpScreenLock": "Bildschirmsperre einrichten",
   "lockUnlockRequired": "Zum Fortfahren entsperren.",
   "lockAuthFailed": "Geräteauthentifizierung fehlgeschlagen.",
   "appLockedTitle": "Eyes Only ist gesperrt",

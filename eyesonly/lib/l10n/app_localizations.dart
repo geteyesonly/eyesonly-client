@@ -344,6 +344,18 @@ abstract class AppLocalizations {
   /// **'No device authentication is available.'**
   String get lockNoAuthAvailable;
 
+  /// No description provided for @lockNoAuthConfiguredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No screen lock is configured on this device. Set up a PIN, pattern, fingerprint, or face unlock in your device settings to use Eyes Only.'**
+  String get lockNoAuthConfiguredMessage;
+
+  /// No description provided for @lockSetUpScreenLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Up Screen Lock'**
+  String get lockSetUpScreenLock;
+
   /// No description provided for @lockUnlockRequired.
   ///
   /// In en, this message translates to:
